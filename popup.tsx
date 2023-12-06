@@ -1,6 +1,7 @@
+
 import { useState } from "react"
 
-function IndexPopup() {
+function Popup() {
   const [data, setData] = useState("")
 
   return (
@@ -8,22 +9,15 @@ function IndexPopup() {
       style={{
         display: "flex",
         flexDirection: "column",
-        padding: 16
+        padding: 16,
+        width: 200
       }}>
-      <h2>
-        Welcome to your
-        <a href="https://www.plasmo.com" target="_blank">
-          {" "}
-          Plasmo
-        </a>{" "}
-        Extension!
-      </h2>
-      <input onChange={(e) => setData(e.target.value)} value={data} />
-      <a href="https://docs.plasmo.com" target="_blank">
-        View Docs
-      </a>
+      <h4>
+        欢迎使用 AccessHappily
+      </h4>
+      <a href="/options.html" target="_blank">设置规则</a>{" "}
     </div>
   )
-}
 
-export default IndexPopup
+}
+export default Popup;

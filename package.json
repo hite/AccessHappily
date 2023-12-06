@@ -1,15 +1,17 @@
 {
   "name": "skip-login",
-  "displayName": "Skip login",
+  "displayName": "AccessHappily",
   "version": "0.0.1",
   "description": "Access pages freely without login dialogue",
   "author": "Yanbuxuan",
   "scripts": {
     "dev": "plasmo dev",
     "build": "plasmo build",
+    "build_ff": "plasmo build --target=firefox-mv2",
     "test": "plasmo test"
   },
   "dependencies": {
+    "@plasmohq/storage": "^1.9.0",
     "plasmo": "0.84.0",
     "react": "18.2.0",
     "react-dom": "18.2.0"
