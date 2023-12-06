@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Storage } from "@plasmohq/storage"
 import { builtinRule } from "~content";
-
+import cssText from 'data-text:~style.css';
+import "./style.css"
 
 function IndexPopup() {
   const [domain, setDomain] = useState("")
@@ -85,7 +86,8 @@ function IndexPopup() {
       </p>
       <input style={{
         width: 100
-      }} type='button' onClick={saveRule} value='保存'></input>
+      }} className="inline-flex items-center px-5 py-2.5 text-sm font-medium text-center text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+      type='button' onClick={saveRule} value='保存'></input>
       <h5 style={{
         cursor:'pointer',
         color:'red'
