@@ -62,50 +62,67 @@ function IndexPopup() {
     init();
   },[]);
 
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        padding: 16
-      }}>
-      <h2>
+  return (<section className="bg-gray-2 rounded-xl">
+	<div className="p-8 shadow-lg">
+  <h2 className="text-lg font-medium p-2">
         添加规则 (新规则覆盖旧规则)
       </h2>
-      <p>
-        <label>域名前缀</label>
-        <input required onChange={(e) => setDomain(e.target.value)} value={domain} />
-      </p>
-      <p>
-        <label>类型( autoHide / autoClick/ insertCSS)</label>
-        <input required onChange={(e) => setType(e.target.value)} value={type} />
-      </p>
-      <p>
-        <label>匹配的选择器( ID / className / tag 选择器均可)</label>
-        <input required onChange={(e) => setData(e.target.value)} value={data} />
-      </p>
-      <input style={{
-        width: 100
-      }} className="inline-flex items-center px-5 py-2.5 text-sm font-medium text-center text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
-      type='button' onClick={saveRule} value='保存'></input>
-      <h5 style={{
+		<form className="space-y-4">
+			<div className="w-full">
+				<label className="sr-only" htmlFor="name">域名前缀</label>
+				<input className="input input-solid " placeholder="输入完整域名/前缀" type="text" id="name" required onChange={(e) => setDomain(e.target.value)} value={domain} />
+			</div>
+
+			<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+				<div>
+					<label className="sr-only" htmlFor="email">类型</label>
+          <select className="select">
+          <option value="autoHide" selected>自动隐藏元素</option>
+          <option value="autoClick">自动点击元素</option>
+          <option value="insertCSS">注入样式</option>
+        </select>
+				</div>
+
+			</div>
+
+			<div className="w-full">
+				<label className="sr-only" htmlFor="message">匹配的选择器( ID / className / tag 选择器均可)</label>
+        <input className="input input-solid max-w-full" required onChange={(e) => setData(e.target.value)} value={data} />
+			</div>
+
+			<div className="mt-4">
+				<button type="button" style={{
+          width: 200
+        }} className="rounded-lg btn btn-primary btn-block">保存</button>
+			</div>
+		</form>
+    
+	  </div>
+    <div id="preview" className="p-6">
+    <h5 style={{
         cursor:'pointer',
         color:'red'
       }} onClick={toggleEditor}>▼直接编辑文件(高级用户使用）</h5>
       <div style={{
         display: editorState?'flex': 'none',
+        gap:8,
         flexDirection:'column',
         minHeight:500
       }} id="editor">
         
-        <textarea value={editorContent} onChange={(e) => setEditorContent(e.target.value)}></textarea>
-        <input style={{
-        width: 140
-      }} type='button' onClick={saveRawRule} value='保存( 谨慎使用 ）'></input>
+        <textarea className="textarea textarea-solid max-w-full" placeholder="Message" rows="8" value={editorContent} onChange={(e) => setEditorContent(e.target.value)}></textarea>
+        
+      <button className="btn btn-solid-error" style={{
+        width: 200
+      }} onClick={saveRawRule} >保存( 谨慎使用 </button>
       </div>
     </div>
-    
-  )
+  </section>)
 }
 
 export default IndexPopup
+
+function Sample() {
+  return <section className="bg-gray-2 rounded-xl">
+</section>
+}
