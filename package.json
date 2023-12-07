@@ -1,7 +1,7 @@
 {
   "name": "skip-login",
   "displayName": "AccessHappily",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Access pages freely without must-login dialogue, useless safety warning, unselectable code restriction and etc",
   "author": "Yanbuxuan",
   "scripts": {

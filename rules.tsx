@@ -1,6 +1,6 @@
 
 export const builtinRule = {
-    'zhihu.com': [{
+    'zhuanlan.zhihu.com': [{
       type:'autoHide',
       data: '.Modal-enter-done'
     }],

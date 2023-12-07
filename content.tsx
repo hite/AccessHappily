@@ -12,7 +12,6 @@ const setStyle = (styleText) => {
 const storage = new Storage();
 const uniKey = 'KeyOfRuleForDomains';
 
-
 export function isMatched(domain: string, href: string): boolean {
   let location = new URL(href);
   let url = location.host + location.pathname;
@@ -39,7 +38,6 @@ function nativeTreeWalker(targetContent) {
   );
 
   var node;
-  var textNodes = [];
 
   while(node = walker.nextNode()) {
     let value = node.nodeValue.trim();
@@ -67,74 +65,86 @@ function Content() {
       for (const key in rules) {
         if (Object.prototype.hasOwnProperty.call(rules), key) {
           const ruleList = rules[key];
-          if(isMatched(key, window.location.href)){
-            for (let idx2 = 0; idx2 < ruleList.length; idx2++) {
-              const obj : any = ruleList[idx2];
-              let type = obj.type, data = obj.data;
+          if(!isMatched(key, window.location.href)){
+            continue;
+          }
+          for (let idx2 = 0; idx2 < ruleList.length; idx2++) {
+            const obj : any = ruleList[idx2];
+            let type = obj.type, data = obj.data;
 
-              if(type == 'insertCSS') {
-                setStyle(data);
-                showTips('已注入样式')
-                continue;
-              }
-              let element = null;
-              if (data.startsWith(':contains(')) {
-                // :contains('继续前往')
-                 let rawContent = data.replace(':contains(', '');
-                 let targetContent = rawContent.substring(1, rawContent.length - 2);
-                 let textNode = nativeTreeWalker(targetContent);
-                 if(textNode) {
-                  
-                  element = textNode.parentNode;
-                 }
+            if(type == 'insertCSS') {
+              setStyle(data);
+              showTips('已注入样式')
+              continue;
+            }
+            let element = null;
+            if (data.startsWith(':contains(')) {
+              // :contains('继续前往')
+               let rawContent = data.replace(':contains(', '');
+               let targetContent = rawContent.substring(1, rawContent.length - 2);
+               let textNode = nativeTreeWalker(targetContent);
+               
+               if(textNode) {
+                element = textNode.parentNode;
+               }
+            } else {
+               element = document.querySelector(data);
+            }
+            
+            if (element) {
+              if (type == 'autoHide') {
+                element.style = 'display:none !important';
+                showTips('已自动隐藏登录提示弹窗')
               } else {
-                 element = document.querySelector(data);
+                showTips('已自动点击元素')
+                window.setTimeout(()=>{
+                  element.click();
+                }, 1000);
               }
-              
-              if (element) {
-                if (type == 'autoHide') {
-                  element.style = 'display:none !important';
-                  showTips('已自动隐藏登录提示弹窗')
-                } else {
-                  showTips('已自动点击元素')
-                  window.setTimeout(()=>{
-                    element.click();
-                  }, 1000);
-                }
-              } else {
-                console.error('Not found target node for selector: ' + data);
-              }
+            } else {
+              console.info('Not found target node for selector: ' + data);
             }
           }
         }
       }
-      
-      if(hidden) {
-        window.setTimeout(()=>{
-          setHidden(false);
-        },2000);
-      }
     }
+
     if(document.readyState == 'complete') {
       loadCache();
     } else {
       window.addEventListener('load', ()=>{
-        console.log('loadCache')
         loadCache();
-        console.log('loadCache2')
       });
     }
-  }, [])
+  }, []);
  
   if (hidden) {
-    return (<p
-    style={{
-      color:'darkgreen'
-    }}
-    >{tips}</p>)
+    return <Warning message={tips} autoHideCallback={()=>{
+      setHidden(false);
+    }}></Warning>
   } else {
     return <span/>;
   }
+}
+
+function Warning({message, autoHideCallback}: {message: string, autoHideCallback:Function}) {
+  useEffect(()=>{
+    window.setTimeout(()=>{
+      autoHideCallback();
+    },4000);
+  },[]);
+  return <div style={{
+    backgroundColor: "yellow",
+    width: "100%"
+  }}>
+	<div style={{
+    display:"flex",
+    flexDirection:"column",
+    fontSize: 14
+  }}>
+		<span className="text-content2 alert-success">{message}</span>
+	</div>
+</div>
 }
 
 export default Content
