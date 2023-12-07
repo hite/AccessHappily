@@ -1,6 +1,4 @@
 import { useEffect, useState } from "react"
-import styleText from 'data-text:./content.scss';
-import type { PlasmoGetStyle } from "plasmo";
 import { Storage } from "@plasmohq/storage"
 
 const setStyle = (styleText) => {
@@ -11,54 +9,100 @@ const setStyle = (styleText) => {
     document.head.appendChild(style);
   }
 
- export const builtinRule = {
-  'zhihu.com': [{
-    type:'autoHide',
-    data: '.Modal-enter-done'
-  }],
-  '.csdn.net': [{
-    type:'autoHide',
-    data: '.passport-login-container'
-  },
-  {
-    type:'insertCSS',
-    data: '.passport-container-mini {display: none !important;}'
-  }
-]
- } 
-
 const storage = new Storage();
 const uniKey = 'KeyOfRuleForDomains';
+
+
+export function isMatched(domain: string, href: string): boolean {
+  let location = new URL(href);
+  let url = location.host + location.pathname;
+
+  let hasPrefix = domain.startsWith('*'), hasSuffix = domain.endsWith('*');
+  if (hasPrefix || hasSuffix) {
+     domain = domain.replaceAll('*', '');
+     if(hasPrefix && hasPrefix) {
+      return url.indexOf(domain) > -1;
+     } else if(hasPrefix) {
+      return url.endsWith(domain);
+     } else {
+      return url.startsWith(domain);
+     }
+  } else {
+    return location.host == domain;
+  }
+}
+function nativeTreeWalker(targetContent) {
+  var walker = document.createTreeWalker(
+      document.body, 
+      NodeFilter.SHOW_TEXT, 
+      null
+  );
+
+  var node;
+  var textNodes = [];
+
+  while(node = walker.nextNode()) {
+    let value = node.nodeValue.trim();
+    if (value == targetContent) {
+      return node;
+      break;
+    }
+  }
+  return null;
+}
 function Content() {
 
   console.log(document.readyState);
   const [hidden, setHidden] = useState(false);
-  let host = location.host;
+  const [tips, setTips] = useState('已自动隐藏登录提示弹窗');
+
+  const showTips = (msg) =>{
+    setHidden(true);
+    setTips(msg)
+  }
 
   useEffect(()=>{
-    let loadCache =async () => {
-      let allCustomRules = await storage.get(uniKey);
-      let rules = Object.assign(allCustomRules, builtinRule);
+    let loadCache = async () => {
+      let rules: any = await storage.get(uniKey);
       for (const key in rules) {
         if (Object.prototype.hasOwnProperty.call(rules), key) {
           const ruleList = rules[key];
-          if(host.endsWith(key)){
+          if(isMatched(key, window.location.href)){
             for (let idx2 = 0; idx2 < ruleList.length; idx2++) {
               const obj : any = ruleList[idx2];
               let type = obj.type, data = obj.data;
 
               if(type == 'insertCSS') {
                 setStyle(data);
+                showTips('已注入样式')
                 continue;
               }
-              let element = document.querySelector(data);
+              let element = null;
+              if (data.startsWith(':contains(')) {
+                // :contains('继续前往')
+                 let rawContent = data.replace(':contains(', '');
+                 let targetContent = rawContent.substring(1, rawContent.length - 2);
+                 let textNode = nativeTreeWalker(targetContent);
+                 if(textNode) {
+                  
+                  element = textNode.parentNode;
+                 }
+              } else {
+                 element = document.querySelector(data);
+              }
+              
               if (element) {
                 if (type == 'autoHide') {
-                  element.style = 'display:none !important'
+                  element.style = 'display:none !important';
+                  showTips('已自动隐藏登录提示弹窗')
                 } else {
-                  element.click();
+                  showTips('已自动点击元素')
+                  window.setTimeout(()=>{
+                    element.click();
+                  }, 1000);
                 }
-                setHidden(true)
+              } else {
+                console.error('Not found target node for selector: ' + data);
               }
             }
           }
@@ -71,17 +115,23 @@ function Content() {
         },2000);
       }
     }
-    window.addEventListener('load', ()=>{
+    if(document.readyState == 'complete') {
       loadCache();
-    });
+    } else {
+      window.addEventListener('load', ()=>{
+        console.log('loadCache')
+        loadCache();
+        console.log('loadCache2')
+      });
+    }
   }, [])
  
   if (hidden) {
     return (<p
     style={{
-      color:'yellowgreen'
+      color:'darkgreen'
     }}
-    >已自动隐藏登录提示弹窗</p>)
+    >{tips}</p>)
   } else {
     return <span/>;
   }

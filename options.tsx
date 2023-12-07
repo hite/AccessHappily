@@ -1,15 +1,18 @@
 import { useEffect, useState } from "react";
 import { Storage } from "@plasmohq/storage"
-import { builtinRule } from "~content";
-import cssText from 'data-text:~style.css';
-import "./style.css"
+import { builtinRule } from "~rules";
+import "./style.css";
+
+import JSONInput from 'react-json-editor-ajrm';
+import locale    from 'react-json-editor-ajrm/locale/en';
+import { isMatched } from "~content";
 
 function IndexPopup() {
   const [domain, setDomain] = useState("")
   const [type, setType] = useState("autoHide")
   const [data, setData] = useState("");
 
-  const [editorContent, setEditorContent] = useState('');
+  const [editorContent, setEditorContent] = useState({});
 
   const storage = new Storage()
   const uniKey = 'KeyOfRuleForDomains';
@@ -33,18 +36,13 @@ function IndexPopup() {
     ruleJSON[domain] = ruleForDomain;
     
     let succ = await storage.set(uniKey, ruleJSON);
-
-    setEditorContent(JSON.stringify(ruleJSON));
+    setEditorContent(ruleJSON);
     alert('保存成功');
   }
 
-  const saveRawRule = ()=>{
-    try {
-      JSON.parse(editorContent);
-    } catch (error) {
-      alert('格式错误，保存失败')
-    }
-    storage.set(uniKey, editorContent);
+  const saveRawRule = async ()=>{
+    let succ = await storage.set(uniKey, editorContent);
+    alert('保存成功');
   }
 
   const [editorState, setEditorState] = useState(false);
@@ -56,8 +54,10 @@ function IndexPopup() {
       let original: any = await storage.get(uniKey);
       if (!original) {
         original = builtinRule
+      } else if(typeof original == 'string') {
+        original = JSON.parse(original);
       }
-      setEditorContent(JSON.stringify(original));
+      setEditorContent(original);
     };
     init();
   },[]);
@@ -69,15 +69,16 @@ function IndexPopup() {
       </h2>
 		<form className="space-y-4">
 			<div className="w-full">
-				<label className="sr-only" htmlFor="name">域名前缀</label>
-				<input className="input input-solid " placeholder="输入完整域名/前缀" type="text" id="name" required onChange={(e) => setDomain(e.target.value)} value={domain} />
+				<label className="sr-only" htmlFor="name">网页地址前缀</label>
+				<input className="input input-solid " placeholder="输入网页地址规则" type="text" id="name" required onChange={(e) => setDomain(e.target.value)} value={domain} />
+        <span className="text-sm">  如，example.com/path* , *.example.com/path, file.exmaple.com</span>
 			</div>
 
 			<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 				<div>
 					<label className="sr-only" htmlFor="email">类型</label>
-          <select className="select">
-          <option value="autoHide" selected>自动隐藏元素</option>
+          <select className="select" defaultValue="autoHide">
+          <option value="autoHide">自动隐藏元素</option>
           <option value="autoClick">自动点击元素</option>
           <option value="insertCSS">注入样式</option>
         </select>
@@ -87,13 +88,13 @@ function IndexPopup() {
 
 			<div className="w-full">
 				<label className="sr-only" htmlFor="message">匹配的选择器( ID / className / tag 选择器均可)</label>
-        <input className="input input-solid max-w-full" required onChange={(e) => setData(e.target.value)} value={data} />
+        <input className="input input-solid max-w-full" placeholder="输入样式规则，可参考下方原始文件" required onChange={(e) => setData(e.target.value)} value={data} />
 			</div>
 
 			<div className="mt-4">
 				<button type="button" style={{
           width: 200
-        }} className="rounded-lg btn btn-primary btn-block">保存</button>
+        }} className="rounded-lg btn btn-primary btn-block" onClick={saveRule}>保存</button>
 			</div>
 		</form>
     
@@ -110,19 +111,77 @@ function IndexPopup() {
         minHeight:500
       }} id="editor">
         
-        <textarea className="textarea textarea-solid max-w-full" placeholder="Message" rows="8" value={editorContent} onChange={(e) => setEditorContent(e.target.value)}></textarea>
-        
+      <JSONInput
+        id          = 'a_unique_id'
+        placeholder = { editorContent }
+        locale      = { locale }
+        height      = '550px'
+        onChange={input => setEditorContent(input.jsObject)}
+    />
       <button className="btn btn-solid-error" style={{
         width: 200
-      }} onClick={saveRawRule} >保存( 谨慎使用 </button>
+      }} onClick={saveRawRule} >保存( 谨慎使用) </button>
       </div>
     </div>
+
   </section>)
 }
 
-export default IndexPopup
+function PlayGround() {
+  const [rule, setRule] = useState('');
+  const [url, setUrl] = useState('');
 
-function Sample() {
-  return <section className="bg-gray-2 rounded-xl">
-</section>
+  const [checkState, setCheckState] = useState('');
+  const validate = ()=>{
+    setCheckState(isMatched(rule, url)? 'succ':'failed')
+  };
+
+  
+  let validation = <label className="form-label">
+  <span className="form-label-alt">未测试</span></label> ;
+  if (checkState.length > 0 ) {
+    validation = checkState == 'succ' ? <label className="form-label">
+      <span className="form-label-alt text-success">匹配</span></label> : 
+      <label className="form-label">
+			<span className="form-label-alt text-error">不匹配</span>
+		</label>;
+  } 
+
+  return <div className="form-group p-4">
+    <div className="form-field">
+    <label className="form-label">规则</label>
+      <input placeholder="输入地址规则" type="text" className="input max-w-full" value={rule} onChange={(e)=>{
+        setRule(e.target.value);
+        setCheckState('');
+        }}/>
+    </div>
+    <div className="form-field">
+      <label className="form-label">目标地址</label>
+
+      <input placeholder="目标地址，包含 https:// 前缀" type="text" className="input max-w-full" value={url} onChange={(e)=>{setUrl(e.target.value);setCheckState('');}}/>
+      {validation}
+    </div>
+
+    <div className="form-field">
+      <button type="button" className="btn gap-2 bg-gray-5 w-24" onClick={validate}>测试</button>
+    </div>
+  </div>
+}
+
+export default Tab
+
+function Tab() {
+  const [activeTab, setActiveTab] = useState(1);
+  let content = activeTab == 1 ? <IndexPopup></IndexPopup> : <PlayGround></PlayGround>;
+  return (<div className="p-6">
+        <div className="tabs gap-1">
+      <div className={activeTab == 1 ? "tab tab-bordered px-6 tab-active": "tab tab-bordered px-6"} onClick={()=>{
+        setActiveTab(1);
+      }}>编辑规则</div>
+      <div className={activeTab == 2 ?  "tab tab-bordered px-6 tab-active": "tab tab-bordered px-6"} onClick={()=>{
+        setActiveTab(2);
+      }}>测试规则</div>
+    </div>
+    {content}
+  </div>)
 }
