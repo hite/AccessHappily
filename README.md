@@ -1,5 +1,8 @@
 This is a [Plasmo extension](https://docs.plasmo.com/) project bootstrapped with [`plasmo init`](https://www.npmjs.com/package/plasmo).
 
+## 自定义过滤规则
+见 rules.tsx 文件
+
 ## Getting Started
 
 First, run the development server:
