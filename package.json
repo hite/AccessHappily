@@ -1,13 +1,15 @@
 {
   "name": "skip-login",
   "displayName": "AccessHappily",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Access pages freely without must-login dialogue, useless safety warning, unselectable code restriction and etc",
   "author": "Yanbuxuan",
   "scripts": {
     "dev": "plasmo dev",
+    "dev_sf": "plasmo dev --target=safari-mv3",
     "build": "plasmo build",
     "build_ff": "plasmo build --target=firefox-mv2",
+    "build_sf": "plasmo build --target=safari-mv3",
     "test": "plasmo test"
   },
   "dependencies": {

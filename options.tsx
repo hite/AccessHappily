@@ -77,7 +77,7 @@ function IndexPopup() {
 			<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 				<div>
 					<label className="sr-only" htmlFor="email">类型</label>
-          <select className="select" defaultValue="autoHide">
+          <select className="select" defaultValue={type} onChange={(e) => setType(e.target.value)}>
           <option value="autoHide">自动隐藏元素</option>
           <option value="autoClick">自动点击元素</option>
           <option value="insertCSS">注入样式</option>
