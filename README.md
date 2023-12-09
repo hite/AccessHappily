@@ -4,6 +4,7 @@ This is a [Plasmo extension](https://docs.plasmo.com/) project bootstrapped with
 - 内置规则见 rules.tsx 文件
 - 自定义规则，安装后点击工具栏图标，进入管理界面
 > 编辑规则界面的“源文件”为样例配置，保存后快速应用以上规则。
+> 我自己用的规则： https://gist.github.com/hite/0b25fc43dea5a5b14af2cec6310ce903
 ## 定制页面
 Options 页面使用 TailwindCSS 和 [RippleUI](https://www.ripple-ui.com/docs/components/forms) 制作.
 
