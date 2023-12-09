@@ -1,7 +1,7 @@
 {
   "name": "skip-login",
   "displayName": "AccessHappily",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Access pages freely without must-login dialogue, useless safety warning, unselectable code restriction and etc",
   "author": "Yanbuxuan",
   "scripts": {
@@ -14,16 +14,11 @@
   },
   "dependencies": {
     "@plasmohq/storage": "^1.9.0",
-    "brace": "^0.11.1",
-    "jsoneditor": "^9.10.4",
-    "jsoneditor-react": "^3.1.2",
-    "jsoneditor-react18": "^0.5.0",
     "plasmo": "0.84.0",
     "react": "18.2.0",
-    "react-ace": "^10.1.0",
     "react-dom": "18.2.0",
-    "react-json-editor-ajrm": "^2.5.14",
-    "rippleui": "^1.12.1"
+    "rippleui": "^1.12.1",
+    "vanilla-jsoneditor": "^0.20.0"
   },
   "devDependencies": {
     "@ianvs/prettier-plugin-sort-imports": "4.1.1",

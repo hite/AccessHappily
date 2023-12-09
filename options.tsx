@@ -3,9 +3,8 @@ import { Storage } from "@plasmohq/storage"
 import { builtinRule } from "~rules";
 import "./style.css";
 
-import JSONInput from 'react-json-editor-ajrm';
-import locale    from 'react-json-editor-ajrm/locale/en';
 import { isMatched } from "~content";
+import VanillaJSONEditor from "./VanillaJSONEditor";
 
 function IndexPopup() {
   const [domain, setDomain] = useState("")
@@ -42,6 +41,7 @@ function IndexPopup() {
 
   const saveRawRule = async ()=>{
     let succ = await storage.set(uniKey, editorContent);
+    debugger;
     alert('保存成功');
   }
 
@@ -110,14 +110,17 @@ function IndexPopup() {
         flexDirection:'column',
         minHeight:500
       }} id="editor">
-        
-      <JSONInput
-        id          = 'a_unique_id'
-        placeholder = { editorContent }
-        locale      = { locale }
-        height      = '550px'
-        onChange={input => setEditorContent(input.jsObject)}
-    />
+      <div className="my-editor">
+        <VanillaJSONEditor
+            content={{
+              "json": editorContent
+            }}
+            mode="text"
+            readOnly={false}
+            onChange={(input)=>{console.log('VanillaJSONEditor',input);setEditorContent(input.json)}}
+          />
+      </div>
+      
       <button className="btn btn-solid-error" style={{
         width: 200
       }} onClick={saveRawRule} >保存( 谨慎使用) </button>
@@ -172,7 +175,12 @@ export default Tab
 
 function Tab() {
   const [activeTab, setActiveTab] = useState(1);
-  let content = activeTab == 1 ? <IndexPopup></IndexPopup> : <PlayGround></PlayGround>;
+  let content = <IndexPopup></IndexPopup>;
+  if (activeTab == 2) {
+    content = <PlayGround></PlayGround>;
+  } else if (activeTab == 3) {
+    content = <Suscription></Suscription>;
+  }
   return (<div className="p-6">
         <div className="tabs gap-1">
       <div className={activeTab == 1 ? "tab tab-bordered px-6 tab-active": "tab tab-bordered px-6"} onClick={()=>{
@@ -181,7 +189,118 @@ function Tab() {
       <div className={activeTab == 2 ?  "tab tab-bordered px-6 tab-active": "tab tab-bordered px-6"} onClick={()=>{
         setActiveTab(2);
       }}>测试规则</div>
+      <div className={activeTab == 3 ?  "tab tab-bordered px-6 tab-active": "tab tab-bordered px-6"} onClick={()=>{
+        setActiveTab(3);
+      }}>订阅规则</div>
     </div>
     {content}
   </div>)
+}
+
+function Suscription() {
+  return <div className="flex flex-col py-4 gap-8">
+    <AddSub></AddSub>
+    <div className="flex flex-row">
+      <TableList></TableList>
+      
+    </div>
+  </div>
+}
+
+
+function AddSub() {
+  const [showError, setShowError] = useState('none');
+
+  return <div className="flex w-full max-w-sm flex-col gap-6">
+
+    <div className="form-group">
+      <div className="form-field">
+        <label className="form-label">规则地址</label>
+
+        <input placeholder="Type here" type="url" className="input max-w-full" />
+        <label className="form-label" style={{display: showError}}>
+          <span className="form-label-alt">Please enter a valid url.</span>
+        </label>
+      </div>
+
+      <div className="form-field pt-5">
+        <div className="form-control justify-between">
+          <button type="button" className="btn btn-primary">添加</button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+function TableList() {
+  return <div className="flex w-full overflow-x-auto">
+	<table className="table-zebra table">
+		<thead>
+			<tr>
+				<th>顺序</th>
+				<th>地址</th>
+				<th>是否启用</th>
+				<th>操作</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr>
+				<th>1</th>
+				<td>Cy Ganderton</td>
+				<td>Quality Control Specialist</td>
+				<td><label className="btn btn-primary" htmlFor="modal-1">Open Modal</label></td>
+			</tr>
+			<tr>
+				<th>2</th>
+				<td>Hart Hagerty</td>
+				<td>Desktop Support Technician</td>
+				<td><label className="btn btn-primary" htmlFor="modal-1">Open Modal</label></td>
+			</tr>
+			<tr>
+				<th>3</th>
+				<td>Brice Swyre</td>
+				<td>Tax Accountant</td>
+				<td><label className="btn btn-primary" htmlFor="modal-1">Open Modal</label></td>
+			</tr>
+			<tr>
+				<th>3</th>
+				<td>Brice Swyre</td>
+				<td>Tax Accountant</td>
+				<td>Red</td>
+			</tr>
+			<tr>
+				<th>3</th>
+				<td>Brice Swyre</td>
+				<td>Tax Accountant</td>
+				<td>Red</td>
+			</tr>
+		</tbody>
+	</table>
+  
+  <input className="modal-state" id="modal-1" type="checkbox" />
+  <div className="modal">
+    <label className="modal-overlay" htmlFor="modal-1"></label>
+    <div className="modal-content flex flex-col gap-5" style={{
+      maxWidth: 'max-content'
+    }}>
+      <label htmlFor="modal-1" className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</label>
+      <h2 className="text-xl">Modal title 1</h2>
+      <div className="my-editor">
+        <VanillaJSONEditor
+            content={{
+              "json": {}
+            }}
+            mode="text"
+            readOnly={false}
+            onChange={(input)=>{console.log('VanillaJSONEditor',input);}}
+          />
+      </div>
+      <div className="flex gap-3">
+        <button className="btn btn-error btn-block">Delete</button>
+
+        <button className="btn btn-block">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
 }

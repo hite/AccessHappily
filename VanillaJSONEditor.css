@@ -1,0 +1,10 @@
+.vanilla-jsoneditor-react {
+    display: flex;
+    flex: 1;
+  }
+  .my-editor {
+    width: 700px;
+    height: 400px;
+    display: flex;
+  }
+  
