@@ -10,7 +10,8 @@ const setStyle = (styleText) => {
   }
 
 const storage = new Storage();
-const uniKey = 'KeyOfRuleForDomains';
+const kUniKey = 'KeyOfRuleForDomains';
+const kRemoteRule = 'kRemoteRuleForDomains';
 
 export function isMatched(domain: string, href: string): boolean {
   let location = new URL(href);
@@ -61,7 +62,9 @@ function Content() {
 
   useEffect(()=>{
     let loadCache = async () => {
-      let rules: any = await storage.get(uniKey);
+      // 合并自定义和订阅
+      let rules: any = await storage.get(kUniKey);
+      let rulesInSubscription: any = await storage.get(kRemoteRule);
       for (const key in rules) {
         if (Object.prototype.hasOwnProperty.call(rules), key) {
           const ruleList = rules[key];
@@ -95,6 +98,12 @@ function Content() {
               if (type == 'autoHide') {
                 element.style = 'display:none !important';
                 showTips('已自动隐藏登录提示弹窗')
+              } else if (type == 'autoNavigate') {
+                let link = element.value || element.innerText;
+                showTips('已自动跳转到页面 ' + link);
+                window.setTimeout(()=>{
+                  window.location.assign(link);
+                }, 1000);
               } else {
                 showTips('已自动点击元素')
                 window.setTimeout(()=>{

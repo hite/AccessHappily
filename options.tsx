@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
-import { Storage } from "@plasmohq/storage"
 import { builtinRule } from "~rules";
 import "./style.css";
 
 import { isMatched } from "~content";
 import VanillaJSONEditor from "./VanillaJSONEditor";
+
+import { Storage } from "@plasmohq/storage"
+const storage = new Storage()
+const kUniKey = 'KeyOfRuleForDomains';
+const kRemoteRule = 'kRemoteRuleForDomains';
 
 function IndexPopup() {
   const [domain, setDomain] = useState("")
@@ -13,8 +17,6 @@ function IndexPopup() {
 
   const [editorContent, setEditorContent] = useState({});
 
-  const storage = new Storage()
-  const uniKey = 'KeyOfRuleForDomains';
   const saveRule = async ()=>{
     if(domain.length * type.length * data.length == 0) {
       alert('字段不能为空');
@@ -23,7 +25,7 @@ function IndexPopup() {
 
     let rule = {type, data}
     let ruleJSON = {};
-    ruleJSON = await storage.get(uniKey);
+    ruleJSON = await storage.get(kUniKey);
     if(!ruleJSON) {
       ruleJSON = builtinRule;
     }
@@ -34,13 +36,13 @@ function IndexPopup() {
     ruleForDomain.push(rule);
     ruleJSON[domain] = ruleForDomain;
     
-    let succ = await storage.set(uniKey, ruleJSON);
+    let succ = await storage.set(kUniKey, ruleJSON);
     setEditorContent(ruleJSON);
     alert('保存成功');
   }
 
   const saveRawRule = async ()=>{
-    let succ = await storage.set(uniKey, editorContent);
+    let succ = await storage.set(kUniKey, editorContent);
     debugger;
     alert('保存成功');
   }
@@ -51,7 +53,7 @@ function IndexPopup() {
   }
   useEffect(()=>{
     const init =async () => {
-      let original: any = await storage.get(uniKey);
+      let original: any = await storage.get(kUniKey);
       if (!original) {
         original = builtinRule
       } else if(typeof original == 'string') {
@@ -80,6 +82,7 @@ function IndexPopup() {
           <select className="select" defaultValue={type} onChange={(e) => setType(e.target.value)}>
           <option value="autoHide">自动隐藏元素</option>
           <option value="autoClick">自动点击元素</option>
+          <option value="autoNavigate">自动跳转元素</option>
           <option value="insertCSS">注入样式</option>
         </select>
 				</div>
@@ -117,7 +120,15 @@ function IndexPopup() {
             }}
             mode="text"
             readOnly={false}
-            onChange={(input)=>{console.log('VanillaJSONEditor',input);setEditorContent(input.json)}}
+            onChange={(input)=>{
+              console.log('VanillaJSONEditor',input);
+              let json = input.json;
+              if(!json) {
+                json = JSON.parse(input.text);
+              }
+              setEditorContent(json);
+
+            }}
           />
       </div>
       
@@ -175,130 +186,245 @@ export default Tab
 
 function Tab() {
   const [activeTab, setActiveTab] = useState(1);
-  let content = <IndexPopup></IndexPopup>;
+  let content = <Suscription></Suscription>;
   if (activeTab == 2) {
-    content = <PlayGround></PlayGround>;
+    content = <IndexPopup></IndexPopup>;
   } else if (activeTab == 3) {
-    content = <Suscription></Suscription>;
+    content = <PlayGround></PlayGround>;
   }
   return (<div className="p-6">
         <div className="tabs gap-1">
-      <div className={activeTab == 1 ? "tab tab-bordered px-6 tab-active": "tab tab-bordered px-6"} onClick={()=>{
+      <div className={activeTab == 1 ?  "tab tab-bordered px-6 tab-active": "tab tab-bordered px-6"} onClick={()=>{
         setActiveTab(1);
-      }}>编辑规则</div>
-      <div className={activeTab == 2 ?  "tab tab-bordered px-6 tab-active": "tab tab-bordered px-6"} onClick={()=>{
+      }}>订阅规则</div>
+      <div className={activeTab == 2 ? "tab tab-bordered px-6 tab-active": "tab tab-bordered px-6"} onClick={()=>{
         setActiveTab(2);
-      }}>测试规则</div>
+      }}>编辑规则</div>
       <div className={activeTab == 3 ?  "tab tab-bordered px-6 tab-active": "tab tab-bordered px-6"} onClick={()=>{
         setActiveTab(3);
-      }}>订阅规则</div>
+      }}>测试规则</div>
     </div>
     {content}
   </div>)
 }
-
+// 订阅部分
+interface RemoteRule {
+  name: string,
+  url:string,
+  content: string,
+  enabled: boolean
+}
 function Suscription() {
+  let initialData: RemoteRule[] = [];
+  const [data, setData] = useState(initialData);
+
+  useEffect(()=>{
+    storage.get(kRemoteRule).then((val)=>{
+      let list: any = val ? val: [];
+      setData(list);
+    });
+  }, []);
+
   return <div className="flex flex-col py-4 gap-8">
-    <AddSub></AddSub>
+    <AddSub onDataAdded={(added)=>{
+        let newData = [...data, added];
+        setData(newData);
+
+        saveToDB(newData);
+      }}></AddSub>
     <div className="flex flex-row">
-      <TableList></TableList>
-      
+      <TableList data={data} onUpdateData={(updated)=>{
+        let newData = data.map((o)=>{
+          if(updated.url === o.url) {
+            return updated;
+          } else {
+            return o;
+          }
+        });
+        setData(newData);
+        saveToDB(newData);
+      }}></TableList>
     </div>
   </div>
 }
 
+function saveToDB(newData: any) {
+  try {
+    storage.set(kRemoteRule, newData);
+    alert('保存成功')
+  } catch (error) {
+    alert('保存出错')
+  }
+}
 
-function AddSub() {
+async function loadRemoteUrl(url: string) {
+  const myHeaders = new Headers({
+    "Content-Type": "text/json",
+  });
+
+  const myRequest = new Request(url, {
+    method: "GET",
+    headers: myHeaders,
+    mode: "cors",
+    cache: "default",
+  });
+  // let result = await resp.json();
+  let content = null;
+  let text = null;
+  try {
+    let resp = await fetch(myRequest);
+    let text = await resp.text();
+    console.log(text);
+    
+  } catch (error) {
+    alert('远端内容不是合法的 JSON 对象');
+  }
+
+  if(text) {
+    try {
+    content = JSON.parse(text);
+    } catch (error) {
+      alert('远端内容不是合法的 JSON 对象')
+    }
+} 
+  return content;
+}
+
+function AddSub({onDataAdded} :{onDataAdded: (val: RemoteRule)=> void}) {
   const [showError, setShowError] = useState('none');
+  const [url, setUrl] =  useState('');
+  const [name, setName] = useState('');
+  const [showLoading, setShowLoading] = useState('none');
 
   return <div className="flex w-full max-w-sm flex-col gap-6">
-
     <div className="form-group">
       <div className="form-field">
         <label className="form-label">规则地址</label>
 
-        <input placeholder="Type here" type="url" className="input max-w-full" />
+        <input required placeholder="输入 URL，确保内容是合法的 JSON" type="url" className="input max-w-full" value={url} onChange={(e)=>setUrl(e.target.value)} />
         <label className="form-label" style={{display: showError}}>
           <span className="form-label-alt">Please enter a valid url.</span>
         </label>
       </div>
+      <div className="form-field">
+        <label className="form-label">规则描述</label>
 
+        <input required placeholder="起个名字" type="text" className="input " value={name} onChange={(e)=>setName(e.target.value)} />
+      </div>
+      <div style={{display: showLoading}}>
+        <div className="spinner-dot-intermittent"></div><span className="text-blue-500">获取远端内容...</span>
+      </div>
       <div className="form-field pt-5">
         <div className="form-control justify-between">
-          <button type="button" className="btn btn-primary">添加</button>
+          <button type="button" className="btn btn-primary" onClick={async()=>{
+            setShowLoading('block');
+            let content = await loadRemoteUrl(url);
+            setShowLoading('none');
+
+            if(content) {
+              onDataAdded({
+                name: name,
+                url: url,
+                content: content,
+                enabled: true
+              })
+            } else {
+              throw new Error('内容错误');
+            }
+          }}>添加</button>
         </div>
       </div>
     </div>
   </div>
 }
 
-function TableList() {
+function TableList({data, onUpdateData} : {data: Array<RemoteRule>, onUpdateData:(updated: RemoteRule)=>void}) {
+  const [url, setCurrentUrl] = useState('');
+  const [content, setContent] = useState('');
+  const [showLoading, setShowLoading] = useState('none');
+
+  let trs = data.map((item, idx)=>{
+    return <tr key={idx}>
+      <th>{idx + 1}</th>
+      <td>{item.name}</td>
+      <td>{item.url}</td>
+      <td><input type="checkbox" className="checkbox-primary checkbox" checked={item.enabled} onChange={(e)=>{
+        item.enabled = e.target.checked;
+        // 以 url 为 key
+        onUpdateData(item)
+      }}/></td>
+      <td><label className="btn btn-primary" onClick={()=>{
+        setCurrentUrl(item.url);
+        setContent(item.content);
+        let stateinput = document.getElementById('modal-1');
+        stateinput.click();
+      }}>查看规则</label></td>
+    </tr>
+  });
+
   return <div className="flex w-full overflow-x-auto">
 	<table className="table-zebra table">
 		<thead>
 			<tr>
 				<th>顺序</th>
+        <th>描述</th>
 				<th>地址</th>
 				<th>是否启用</th>
 				<th>操作</th>
 			</tr>
 		</thead>
 		<tbody>
-			<tr>
-				<th>1</th>
-				<td>Cy Ganderton</td>
-				<td>Quality Control Specialist</td>
-				<td><label className="btn btn-primary" htmlFor="modal-1">Open Modal</label></td>
-			</tr>
-			<tr>
-				<th>2</th>
-				<td>Hart Hagerty</td>
-				<td>Desktop Support Technician</td>
-				<td><label className="btn btn-primary" htmlFor="modal-1">Open Modal</label></td>
-			</tr>
-			<tr>
-				<th>3</th>
-				<td>Brice Swyre</td>
-				<td>Tax Accountant</td>
-				<td><label className="btn btn-primary" htmlFor="modal-1">Open Modal</label></td>
-			</tr>
-			<tr>
-				<th>3</th>
-				<td>Brice Swyre</td>
-				<td>Tax Accountant</td>
-				<td>Red</td>
-			</tr>
-			<tr>
-				<th>3</th>
-				<td>Brice Swyre</td>
-				<td>Tax Accountant</td>
-				<td>Red</td>
-			</tr>
+      {trs}
 		</tbody>
 	</table>
   
-  <input className="modal-state" id="modal-1" type="checkbox" />
+  <input className="modal-state" id="modal-1" type="checkbox"/>
   <div className="modal">
     <label className="modal-overlay" htmlFor="modal-1"></label>
-    <div className="modal-content flex flex-col gap-5" style={{
+    <div className="modal-content flex flex-col gap-4" style={{
       maxWidth: 'max-content'
     }}>
       <label htmlFor="modal-1" className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</label>
-      <h2 className="text-xl">Modal title 1</h2>
+      <h2 className="text-xl">查看规则内容</h2>
+      <span>{url}</span>
+      <button className="btn" onClick={async ()=>{
+          setShowLoading('block');
+          let result = await loadRemoteUrl(url);
+          setShowLoading('none');
+          setContent(result);
+          
+        }}>从远端更新</button>
+      <div style={{display: showLoading}}>
+        <div className="spinner-dot-intermittent"></div><span className="text-blue-500">获取远端内容...</span>
+      </div>
+      
       <div className="my-editor">
         <VanillaJSONEditor
             content={{
-              "json": {}
+              "json": content
             }}
             mode="text"
-            readOnly={false}
+            readOnly={true}
             onChange={(input)=>{console.log('VanillaJSONEditor',input);}}
           />
       </div>
       <div className="flex gap-3">
-        <button className="btn btn-error btn-block">Delete</button>
+        <button className="btn btn-outline-primary " onClick={async ()=>{
+          let editing = data.filter((o)=>{
+            return o.url == url;
+          });
+          if (editing.length != 1) {
+            alert('数据错误');
+            return
+          }
+          let updated = editing[0];
+          updated.content = content;
+          onUpdateData(updated);
 
-        <button className="btn btn-block">Cancel</button>
+          let stateinput = document.getElementById('modal-1');
+          stateinput.click();
+        }}>保存</button>
+        <label className="btn " htmlFor="modal-1">关闭</label>
       </div>
     </div>
   </div>
