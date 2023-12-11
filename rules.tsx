@@ -1,6 +1,6 @@
 
 export const builtinRule = {
-  "zhuanlan.zhihu.com": [
+  "*.zhihu.com": [
     {
       "type": "autoClick",
       "data": ".Modal-closeButton"

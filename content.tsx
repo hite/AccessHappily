@@ -64,7 +64,17 @@ function Content() {
     let loadCache = async () => {
       // 合并自定义和订阅
       let rules: any = await storage.get(kUniKey);
+
       let rulesInSubscription: any = await storage.get(kRemoteRule);
+      if(rulesInSubscription) {
+        for (let idx = 0; idx < rulesInSubscription.length; idx++) {
+          const sub = rulesInSubscription[idx];
+          if(sub.enabled) {
+            rules = Object.assign(rules, sub.content);
+          }
+        }
+      }
+      
       for (const key in rules) {
         if (Object.prototype.hasOwnProperty.call(rules), key) {
           const ruleList = rules[key];
