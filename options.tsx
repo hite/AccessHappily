@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { RuleActionType, builtinRule } from "~rules";
 import "./style.css";
 
-import { isMatched } from "~content";
+import { isMatched } from "~rules";
 import VanillaJSONEditor from "./VanillaJSONEditor";
 
 import { Storage } from "@plasmohq/storage"
