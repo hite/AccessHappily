@@ -1,13 +1,19 @@
-import { useEffect, useState } from "react"
-import { Storage } from "@plasmohq/storage"
+import { useEffect, useState } from "react";
+import { Storage } from "@plasmohq/storage";
 
-const setStyle = (styleText) => {
+const setStyle = (styleText, num) => {
     const style = document.createElement("style")
     style.textContent = styleText
     style.type = "text/css";
-    style['data-name'] = 'access-happily';
+    style.id = 'ah_style_' + num;
+    style.setAttribute('data-name','access-happily');
     document.head.appendChild(style);
-  }
+}
+
+const activeRules = [];
+function logRule(_rule) {
+  activeRules.push(_rule);
+}
 
 const storage = new Storage();
 const kUniKey = 'KeyOfRuleForDomains';
@@ -31,6 +37,7 @@ export function isMatched(domain: string, href: string): boolean {
     return location.host == domain;
   }
 }
+
 function nativeTreeWalker(targetContent) {
   var walker = document.createTreeWalker(
       document.body, 
@@ -49,6 +56,21 @@ function nativeTreeWalker(targetContent) {
   }
   return null;
 }
+
+function sendToPop(_data){
+  // send message to popup
+  chrome.runtime.sendMessage(_data);
+}
+
+// Listen for messages from the popup.
+chrome.runtime.onMessage.addListener((msg, sender, response) => {
+  console.log('content script', msg, response);
+  let action = msg.action;
+  if(action == 'getActiveRules') {
+    response(activeRules);
+  }
+});
+
 function Content() {
 
   console.log(document.readyState);
@@ -63,8 +85,8 @@ function Content() {
   useEffect(()=>{
     let loadCache = async () => {
       // 合并自定义和订阅
-      let rules: any = await storage.get(kUniKey);
-
+      // 相同的 key 以后面的规则为准
+      let rules: any = [];
       let rulesInSubscription: any = await storage.get(kRemoteRule);
       if(rulesInSubscription) {
         for (let idx = 0; idx < rulesInSubscription.length; idx++) {
@@ -74,6 +96,9 @@ function Content() {
           }
         }
       }
+      // 自定义优先级更高
+      let customRules: any = await storage.get(kUniKey);
+      rules = Object.assign(rules, customRules);
       
       for (const key in rules) {
         if (Object.prototype.hasOwnProperty.call(rules), key) {
@@ -86,8 +111,9 @@ function Content() {
             let type = obj.type, data = obj.data;
 
             if(type == 'insertCSS') {
-              setStyle(data);
-              showTips('已注入样式')
+              setStyle(data, obj.name);
+              showTips('已注入样式');
+              logRule(obj);
               continue;
             }
             let element = null;
@@ -120,6 +146,9 @@ function Content() {
                   element.click();
                 }, 1000);
               }
+              //
+              sendToPop(obj);
+              logRule(obj);
             } else {
               console.info('Not found target node for selector: ' + data);
             }
