@@ -1,6 +1,5 @@
 import { Storage } from "@plasmohq/storage";
 
-
 export enum RuleActionType {
   autoClick = "autoClick",
   autoHide = "autoHide",
@@ -75,44 +74,75 @@ export function isMatched(domain: string, href: string): boolean {
 const storage = new Storage();
 const kUniKey = 'KeyOfRuleForDomains';
 const kRemoteRule = 'kRemoteRuleForDomains';
+const kDisabledRule = 'kDisabledRule';
 
-export async function getAllRules(href?: string, ignoreDisabled: boolean = false) {
-  // 合并自定义和订阅
-      // 相同的 key 以后面的规则为准
-      let rules: any = [];
-      let rulesInSubscription: any = await storage.get(kRemoteRule);
-      if(rulesInSubscription) {
-        for (let idx = 0; idx < rulesInSubscription.length; idx++) {
-          const sub = rulesInSubscription[idx];
-          if(sub.enabled) {
-            rules = Object.assign(rules, sub.content);
-          }
-        }
-      }
-      // 自定义优先级更高
-      let customRules: any = await storage.get(kUniKey);
-      rules = Object.assign(rules, customRules);
-      if (!location) {
-        return rules;
-      }
-
-      let matchedRules = [];
-      for (const key in rules) {
-        if (Object.prototype.hasOwnProperty.call(rules), key) {
-          const ruleList = rules[key];
-          if(!isMatched(key, href)){
-            continue;
-          }
-          for (let idx2 = 0; idx2 < ruleList.length; idx2++) {
-            const obj : any = ruleList[idx2];
-            if(obj.disabled && !ignoreDisabled) {
-              console.log('ignore rule', obj);
-              continue;
-            }
-
-            matchedRules.push(obj);
-          }
-        }
-      }
-      return matchedRules;
+export async function disableRules(url: string, rule: IRuleAction) {
+  let disabled: any = await storage.get(kDisabledRule);
+  if(!disabled) {
+    disabled = {};
+  }
+  // trim query objects
+  let newUrl = url.split('?')[0];
+  disabled[newUrl] =  rule;
+  await storage.set(kDisabledRule, disabled);
 }
+
+
+async function getAllRules() {
+  // 合并自定义和订阅
+  // 相同的 key 以后面的规则为准
+  let rules: IRule = {};
+  let rulesInSubscription: any = await storage.get(kRemoteRule);
+  if(rulesInSubscription) {
+    for (let idx = 0; idx < rulesInSubscription.length; idx++) {
+      const sub = rulesInSubscription[idx];
+      if(sub.enabled) {
+        rules = Object.assign(rules, sub.content);
+      }
+    }
+  }
+  // 自定义优先级更高
+  let customRules: IRule = await storage.get(kUniKey);
+  rules = Object.assign(rules, customRules);
+  return rules;
+}
+
+async function isRuleIgnored(domain: string, activeRule: IRuleAction): Promise<boolean> {
+  let rules: any = await storage.get(kDisabledRule);
+  for(const shortUrl in rules) {
+    if(isMatched(domain, shortUrl)) {
+      let disabledItem = rules[shortUrl];
+      if(activeRule.data == disabledItem.data && activeRule.type == disabledItem.type && activeRule.name == disabledItem.name) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+export async function getRules(href: string) {
+  // 合并自定义和订阅
+  // 相同的 key 以后面的规则为准
+  let rules: IRule = await getAllRules();
+
+  let matchedRules = [];
+  for (const domain in rules) {
+    if (Object.prototype.hasOwnProperty.call(rules), domain) {
+      const ruleList = rules[domain];
+      if(!isMatched(domain, href)){
+        continue;
+      }
+      for (let idx2 = 0; idx2 < ruleList.length; idx2++) {
+        const obj = ruleList[idx2];
+        obj.disabled = await isRuleIgnored(domain, obj);
+        if(obj.disabled) {
+          console.log('ignore disabled rule', obj);
+        }
+
+        matchedRules.push(obj);
+      }
+    }
+  }
+  return matchedRules;
+}
+

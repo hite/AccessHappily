@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { IoMdSettings } from "react-icons/io";
 import { FaQuestionCircle } from "react-icons/fa";
 import "./style.css";
-import type { IRuleAction } from "~rules";
+import { disableRules, type IRuleAction } from "~rules";
 
 function Popup() {
   const [data, setData] = useState<Array<IRuleAction>>([]);
@@ -33,10 +33,8 @@ function Popup() {
     chrome.tabs.query({currentWindow: true, active: true}, function (tabs){
       var activeTab = tabs[0];
       let url = activeTab.url;
-      // 筛选规则，
-      getAllRules().then((rules)=>{
-
-      });
+      // 更新规则
+      disableRules(url, rule);
     });
   };
 
@@ -59,7 +57,18 @@ function Popup() {
       <td>
         <div>
           <label className="flex cursor-pointer gap-2">
-            <input type="checkbox" className="checkbox" checked={!o.disabled} onClick={()=>{
+            <input type="checkbox" className="checkbox" checked={!o.disabled} onChange={(e)=>{
+              o.disabled = !e.target.checked;
+              let newData = data.map((item)=>{
+                if(o.data ==  item.data && o.name == item.name && o.type == item.type) {
+                  return o;
+                } else {
+                  return item;
+                }
+              });
+              // update UI
+              setData(newData);
+              // save to cache
               updateDisabled(o);
             }}/>
             <span>启用</span>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getAllRules } from "~rules";
+import { getRules } from "~rules";
 
 const setStyle = (styleText, num) => {
   const style = document.createElement("style")
@@ -14,9 +14,6 @@ const activeRules = [];
 function logRule(_rule) {
   activeRules.push(_rule);
 }
-
-
-
 
 function nativeTreeWalker(targetContent) {
   var walker = document.createTreeWalker(
@@ -64,15 +61,15 @@ function Content() {
 
   useEffect(() => {
     let loadCache = async () => {
-      const ruleList = await getAllRules(window.location.href);
+      const ruleList = await getRules(window.location.href);
       for (let idx2 = 0; idx2 < ruleList.length; idx2++) {
         const obj: any = ruleList[idx2];
-        let type = obj.type, data = obj.data;
-        if (obj.disabled) {
-          console.log('ignore rule', obj);
+        
+        if(obj.disabled) {
+          logRule(obj)
           continue;
         }
-
+        let type = obj.type, data = obj.data;
         if (type == 'insertCSS') {
           setStyle(data, obj.name);
           showTips('已注入样式');
@@ -116,14 +113,13 @@ function Content() {
           console.info('Not found target node for selector: ' + data);
         }
       }
-
-      if (document.readyState == 'complete') {
+    };
+    if (document.readyState == 'complete') {
+      loadCache();
+    } else {
+      window.addEventListener('load', () => {
         loadCache();
-      } else {
-        window.addEventListener('load', () => {
-          loadCache();
-        });
-      }
+      });
     }
   }, []);
 

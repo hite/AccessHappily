@@ -13,23 +13,15 @@ const kRemoteRule = 'kRemoteRuleForDomains';
 function IndexPopup() {
   const [domain, setDomain] = useState("")
   const [type, setType] = useState(RuleActionType.autoHide)
+  const [name, setName] = useState("");
   const [data, setData] = useState("");
-  const [disalbed, setDisabled] = useState(false);
 
   const [editorContent, setEditorContent] = useState({});
 
   const saveRule = async () => {
-    if (domain.length * type.length * data.length == 0) {
-      alert('字段不能为空');
-      return;
-    }
-
-    let rule = { type, data }
-    let ruleJSON = {};
-    ruleJSON = await storage.get(kUniKey);
-    if (!ruleJSON) {
-      ruleJSON = builtinRule;
-    }
+    let rule = { type, name, data}
+    let ruleJSON = await storage.get(kUniKey) || {};
+ 
     let ruleForDomain = ruleJSON[domain];
     if (!ruleForDomain) {
       ruleForDomain = [];
@@ -37,15 +29,22 @@ function IndexPopup() {
     ruleForDomain.push(rule);
     ruleJSON[domain] = ruleForDomain;
 
-    let succ = await storage.set(kUniKey, ruleJSON);
-    setEditorContent(ruleJSON);
-    alert('保存成功');
+    try {
+      await storage.set(kUniKey, ruleJSON);
+      setEditorContent(ruleJSON);
+      alert('保存成功');
+    } catch (error) {
+      alert('出错了：' + error.message);
+    }
   }
 
   const saveRawRule = async () => {
-    let succ = await storage.set(kUniKey, editorContent);
-    debugger;
-    alert('保存成功');
+    try {
+      await storage.set(kUniKey, editorContent);
+      alert('保存成功');
+    } catch (error) {
+      alert('出错了：' + error.message);
+    }
   }
 
   const [onlyView, setEditorState] = useState(true);
@@ -68,7 +67,7 @@ function IndexPopup() {
       <h2 className="text-lg font-medium p-2">
         添加规则 (新规则覆盖旧规则)
       </h2>
-      <form className="space-y-4">
+      <form className="space-y-4" onSubmit={saveRule}>
         <div className="w-full">
           <label className="sr-only" htmlFor="name">网页地址前缀</label>
           <input className="input input-solid " placeholder="输入网页地址规则" type="text" id="name" required onChange={(e) => setDomain(e.target.value)} value={domain} />
@@ -89,19 +88,16 @@ function IndexPopup() {
 
         <div className="w-full">
           <label className="sr-only" htmlFor="message">匹配的选择器( ID / className / tag 选择器均可)</label>
-          <input className="input input-solid max-w-full" id="message" placeholder="输入样式规则，可参考下方原始文件" required onChange={(e) => setData(e.target.value)} value={data} />
+          <input className="input input-solid max-w-full" id="message" placeholder="输入样式规则，可参考下方预览里内容" required onChange={(e) => setData(e.target.value)} value={data} />
         </div>
-        <div className="w-full">
-          <label className="flex cursor-pointer gap-2">
-            <input type="checkbox" className="checkbox" checked={!disalbed} onChange={(e) => setDisabled(!e.target.checked)} />
-            <span>是否启用</span>
-          </label>
+        <div>
+          <label className="sr-only" htmlFor="name">规则名称</label>
+          <input className="input input-solid" id="name" placeholder="输入对样式规则对描述，便于区别" required onChange={(e) => setName(e.target.value)} value={name} />
         </div>
-
         <div className="mt-4">
-          <button type="button" style={{
+          <button type="submit" style={{
             width: 200
-          }} className="rounded-lg btn btn-primary btn-block" onClick={saveRule}>保存</button>
+          }} className="rounded-lg btn btn-primary btn-block">保存</button>
         </div>
       </form>
 
@@ -110,7 +106,7 @@ function IndexPopup() {
       <div className="flex flex-row gap-2 items-center">
           <span className="text-lg font-medium">当前生效的规则预览 </span>
           <label className="flex cursor-pointer gap-1 text-red-600">
-            <input type="checkbox" className="checkbox" checked={onlyView} onChange={(e)=>{setEditorState(e.target.checked);}} />
+            <input type="checkbox" className="checkbox" checked={!onlyView} onChange={(e)=>{setEditorState(!onlyView);}} />
             <span>容许编辑文件(高级用户使用）</span>
           </label>
       </div>
