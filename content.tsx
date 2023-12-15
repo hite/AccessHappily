@@ -123,6 +123,7 @@ function Content() {
 
   useEffect(() => {
     let loadCache = async () => {
+      console.log('loadCache');
       const ruleList = await getRules(window.location.href);
       for (let idx2 = 0; idx2 < ruleList.length; idx2++) {
         const obj: any = ruleList[idx2];
@@ -302,9 +303,7 @@ function AddPanel({selector, onClose}:{selector: string, onClose: Function}) {
           </div>
           <div className="form-field">
             <div className="form-control justify-between">
-              <button type="submit" style={{
-                width: 200
-              }} className="rounded-lg btn btn-primary btn-block">保存</button>
+              <button type="submit" className="rounded-lg btn btn-primary">保存</button>
               <button className="btn" onClick={()=>{
                 onClose();
               }}>放弃</button>

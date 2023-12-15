@@ -377,24 +377,30 @@ function TableList({ data, onUpdateData }: { data: Array<RemoteRule>, onUpdateDa
   const [content, setContent] = useState('');
   const [showLoading, setShowLoading] = useState('none');
 
-  let trs = data.map((item, idx) => {
-    return <tr key={idx}>
-      <th>{idx + 1}</th>
-      <td>{item.name}</td>
-      <td>{item.url}</td>
-      <td><input type="checkbox" className="checkbox-primary checkbox" checked={item.enabled} onChange={(e) => {
-        item.enabled = e.target.checked;
-        // 以 url 为 key
-        onUpdateData(item)
-      }} /></td>
-      <td><label className="btn btn-primary" onClick={() => {
-        setCurrentUrl(item.url);
-        setContent(item.content);
-        let stateinput = document.getElementById('modal-1');
-        stateinput.click();
-      }}>查看规则</label></td>
-    </tr>
-  });
+  
+  let trs = [<tr>
+    <th className="p-2" colSpan={4}>无生效的规则</th>
+  </tr>]
+  if (data.length > 0) {
+    trs = data.map((item, idx) => {
+      return <tr key={idx}>
+        <th>{idx + 1}</th>
+        <td>{item.name}</td>
+        <td>{item.url}</td>
+        <td><input type="checkbox" className="checkbox-primary checkbox" checked={item.enabled} onChange={(e) => {
+          item.enabled = e.target.checked;
+          // 以 url 为 key
+          onUpdateData(item)
+        }} /></td>
+        <td><label className="btn btn-primary" onClick={() => {
+          setCurrentUrl(item.url);
+          setContent(item.content);
+          let stateinput = document.getElementById('modal-1');
+          stateinput.click();
+        }}>查看规则</label></td>
+      </tr>
+    });
+  }
 
   return <div className="flex w-full overflow-x-auto">
     <table className="table-zebra table">

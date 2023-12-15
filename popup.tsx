@@ -39,18 +39,18 @@ function Popup() {
   };
 
   let trs = [<tr>
-    <th colSpan={4}>无生效的规则</th>
+    <th className="py-2" colSpan={4}>无生效的规则</th>
   </tr>];
 
   if(data.length > 0 ) {
     trs = data.map((o, idx)=>{
       let desc = '';
-      if(o.type == 'insertCSS') {
-        desc = '立即生效'
-      } else if(['insertCSS'].includes(o.type)){
-        desc = '下次刷新生效'
-      }
-      return <tr>
+      // if(o.type == 'insertCSS') {
+      //   desc = '立即生效'
+      // } else if(['insertCSS'].includes(o.type)){
+      //   desc = '下次刷新生效'
+      // }
+      return <tr key={idx}>
       <th>{idx + 1}</th>
       <td>{o.type}</td>
       <td>{o.name || '<no-name>'}</td>
