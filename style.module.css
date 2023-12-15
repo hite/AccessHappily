@@ -1,0 +1,18 @@
+
+.add_panel{
+    @apply fixed bg-green-600 w-full h-48;
+}
+
+.alert_wrap{
+    @apply fixed flex flex-col items-center;
+    top: 48px;
+    left: 0;
+    right: 0;
+}
+
+.normal_tab{
+    @apply inline-block p-2 border-b-2 border-transparent rounded-t-lg hover:text-gray-600 hover:border-gray-300 dark:hover:text-gray-300;
+}
+.active_tab{
+    @apply inline-block p-2 text-blue-600 border-b-2 border-blue-600 rounded-t-lg  dark:text-blue-500 dark:border-blue-500;
+}

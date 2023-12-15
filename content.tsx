@@ -1,5 +1,23 @@
 import { useEffect, useState } from "react";
+import eventEmitter, { EventEmitter} from "~EventEmitter";
 import { getRules } from "~rules";
+
+// 生成文本
+import styleText from "data-text:./style.module.css"
+// import type { PlasmoCSConfig } from "plasmo"
+ 
+// 生成编译期间对象
+import * as S from "./style.module.css"
+ // injectAnchor 的时候会注入 样式文件
+export const getStyle = () => {
+  console.log('sgette');
+  const style = document.createElement("style")
+  style.textContent = styleText
+  return style
+}
+
+const kEventKeyContextMenus = 'kEventKeyContextMenus';
+// const eventEmitter = new EventEmitter();
 
 const setStyle = (styleText, num) => {
   const style = document.createElement("style")
@@ -38,26 +56,80 @@ function sendToPop(_data) {
   // send message to popup
   chrome.runtime.sendMessage(_data);
 }
+// generate selector from dom hierarchy
+function getSelector(_target: Element): string {
+  if(!_target) throw new Error('pass nonnull element');
 
+  let classList: string[] = [];
+  let stop = false;
+  while(!stop && _target) {
+    if(_target == document.body) {
+      classList.push('body');
+      stop = true;
+    } else if(_target.id) {
+      classList.push(`#${_target.id}`);
+      stop = true;
+    } else {
+      if(_target.className) {
+        let classNameList = _target.className.split(' ');
+        classList.push('.' + classNameList[0]);
+      }
+      _target = _target.parentElement;
+    }
+  }
+  return classList.reverse().join(' ');
+}
 // Listen for messages from the popup.
 chrome.runtime.onMessage.addListener((msg, sender, response) => {
-  console.log('content script', msg, response);
+  console.log('content script', msg);
   let action = msg.action;
-  if (action == 'getActiveRules') {
-    response(activeRules);
+  switch (action) {
+    case 'detectElement':
+      {
+        if(!lastRightClickedElement) {
+          console.error('no element right clicked');
+          return;
+        }
+        eventEmitter.emit(kEventKeyContextMenus);
+      }
+      break;
+    case 'getActiveRules':
+      response(activeRules);
+      break;
+  
+    default:
+      break;
   }
+
 });
 
-function Content() {
+let lastRightClickedElement = null;
+function listenContextMenuShow() {
+  document.body.addEventListener('contextmenu', function(ev) {
+    lastRightClickedElement =  ev.target;
+    console.log('interprite', lastRightClickedElement);
+    return true;
+  }, false);
+}
 
+
+function Content() {
   console.log(document.readyState);
   const [hidden, setHidden] = useState(false);
   const [tips, setTips] = useState('已自动隐藏登录提示弹窗');
+
+  const [showPanel, setShowPanel] = useState(true);
 
   const showTips = (msg) => {
     setHidden(true);
     setTips(msg)
   }
+
+  useEffect(()=>{
+    eventEmitter.add(kEventKeyContextMenus, ()=>{
+      setShowPanel(true);
+    });
+  },[]);
 
   useEffect(() => {
     let loadCache = async () => {
@@ -119,17 +191,22 @@ function Content() {
     } else {
       window.addEventListener('load', () => {
         loadCache();
+        listenContextMenuShow();
       });
     }
   }, []);
 
-  if (hidden) {
-    return <Warning message={tips} autoHideCallback={() => {
+  let UI = <span />;
+  if (showPanel) {
+    UI = <AddPanel onClose={()=>{
+      setShowPanel(false);
+    }} />
+  } else if (hidden) {
+    UI = <Warning message={tips} autoHideCallback={() => {
       setHidden(false);
     }}></Warning>
-  } else {
-    return <span />;
   }
+  return UI;
 }
 
 function Warning({ message, autoHideCallback }: { message: string, autoHideCallback: Function }) {
@@ -150,6 +227,21 @@ function Warning({ message, autoHideCallback }: { message: string, autoHideCallb
       <span className="text-content2 alert-success">{message}</span>
     </div>
   </div>
+}
+
+function AddPanel({onClose}:{onClose: Function}) {
+  var selector = '2';//getSelector(lastRightClickedElement);
+  lastRightClickedElement = null;
+  if(selector) {
+    return <div className={S.add_panel}>
+      add me {selector}
+      <button className="btn">Default</button>
+    </div>
+  } else {
+    return <div>
+      数据错误
+    </div>
+  }
 }
 
 export default Content

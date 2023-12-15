@@ -37,6 +37,9 @@
   "manifest": {
     "host_permissions": [
       "https://*/*"
+    ],
+    "permissions": [
+      "contextMenus"
     ]
   }
 }
