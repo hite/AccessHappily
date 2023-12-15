@@ -1,16 +1,22 @@
 import { useEffect, useState } from "react";
 import eventEmitter, { EventEmitter} from "~EventEmitter";
-import { getRules } from "~rules";
+import { getRules, getSelector, type IRuleAction } from "~rules";
+
+import { RuleActionType, builtinRule } from "~rules";
+// 这里很关键：引入基础样式，否则按钮没有背景色（rippleUI）
+import "./style.css";
+
+import VanillaJSONEditor from "./VanillaJSONEditor";
+
+import { Storage } from "@plasmohq/storage"
+const storage = new Storage()
+const kUniKey = 'KeyOfRuleForDomains';
 
 // 生成文本
-import styleText from "data-text:./style.module.css"
-// import type { PlasmoCSConfig } from "plasmo"
- 
-// 生成编译期间对象
-import * as S from "./style.module.css"
- // injectAnchor 的时候会注入 样式文件
-export const getStyle = () => {
-  console.log('sgette');
+import styleText from "data-text:./style.css"
+import type { PlasmoGetStyle } from "plasmo"
+  // injectAnchor 的时候会注入 样式文件
+export const getStyle: PlasmoGetStyle = () => {
   const style = document.createElement("style")
   style.textContent = styleText
   return style
@@ -56,29 +62,7 @@ function sendToPop(_data) {
   // send message to popup
   chrome.runtime.sendMessage(_data);
 }
-// generate selector from dom hierarchy
-function getSelector(_target: Element): string {
-  if(!_target) throw new Error('pass nonnull element');
 
-  let classList: string[] = [];
-  let stop = false;
-  while(!stop && _target) {
-    if(_target == document.body) {
-      classList.push('body');
-      stop = true;
-    } else if(_target.id) {
-      classList.push(`#${_target.id}`);
-      stop = true;
-    } else {
-      if(_target.className) {
-        let classNameList = _target.className.split(' ');
-        classList.push('.' + classNameList[0]);
-      }
-      _target = _target.parentElement;
-    }
-  }
-  return classList.reverse().join(' ');
-}
 // Listen for messages from the popup.
 chrome.runtime.onMessage.addListener((msg, sender, response) => {
   console.log('content script', msg);
@@ -118,7 +102,8 @@ function Content() {
   const [hidden, setHidden] = useState(false);
   const [tips, setTips] = useState('已自动隐藏登录提示弹窗');
 
-  const [showPanel, setShowPanel] = useState(true);
+  const [selector, setSelector] = useState(null);
+  const [showPanel, setShowPanel] = useState(false);
 
   const showTips = (msg) => {
     setHidden(true);
@@ -127,6 +112,11 @@ function Content() {
 
   useEffect(()=>{
     eventEmitter.add(kEventKeyContextMenus, ()=>{
+      var selector = getSelector(lastRightClickedElement);
+      if(selector) {
+        setSelector(selector);
+        lastRightClickedElement = null;
+      }
       setShowPanel(true);
     });
   },[]);
@@ -198,9 +188,15 @@ function Content() {
 
   let UI = <span />;
   if (showPanel) {
-    UI = <AddPanel onClose={()=>{
-      setShowPanel(false);
-    }} />
+    if(selector) {
+      UI = <AddPanel selector={selector} onClose={()=>{
+        setShowPanel(false);
+      }} />
+    } else {
+      UI = <div>
+        <span className="text-red-600">数据错误, 没有选中元素</span>
+      </div>;
+    }
   } else if (hidden) {
     UI = <Warning message={tips} autoHideCallback={() => {
       setHidden(false);
@@ -229,19 +225,94 @@ function Warning({ message, autoHideCallback }: { message: string, autoHideCallb
   </div>
 }
 
-function AddPanel({onClose}:{onClose: Function}) {
-  var selector = '2';//getSelector(lastRightClickedElement);
-  lastRightClickedElement = null;
-  if(selector) {
-    return <div className={S.add_panel}>
-      add me {selector}
-      <button className="btn">Default</button>
-    </div>
-  } else {
-    return <div>
-      数据错误
-    </div>
+function AddPanel({selector, onClose}:{selector: string, onClose: Function}) {
+  
+  const [data, setData] = useState(selector);
+
+  const location = document.location;
+  let urlPrefix = location.host + location.pathname + '*';
+
+  const [domain, setDomain] = useState(urlPrefix)
+  const [type, setType] = useState(RuleActionType.autoHide)
+
+  const titleName = document.title || '<no_title_page>';
+  const [name, setName] = useState(titleName);
+
+  const [editorContent, setEditorContent] = useState({});
+
+  const saveRule = async () => {
+    let rule: IRuleAction = { type, name, data}
+    rule.exampleUrl = document.location.href;
+    let ruleJSON = await storage.get(kUniKey) || {};
+ 
+    let ruleForDomain = ruleJSON[domain];
+    if (!ruleForDomain) {
+      ruleForDomain = [];
+    }
+    ruleForDomain.push(rule);
+    ruleJSON[domain] = ruleForDomain;
+
+    try {
+      await storage.set(kUniKey, ruleJSON);
+      setEditorContent(ruleJSON);
+      alert('保存成功');
+    } catch (error) {
+      alert('出错了：' + error.message);
+    }
   }
+
+  return <div className="cl-s bg-white w-96 p-4 fixed">
+      <div className="mx-auto flex w-full max-w-sm flex-col gap-6">
+        <div className="flex flex-col gap-1">
+          <h1 className="text-3xl font-semibold">手动添加规则 （beta）</h1>
+          <p className="text-xs text-yellow-600">以下生成规则大部分情况下不需要修改，除非你懂</p>
+        </div>
+        <form className="form-group" onSubmit={saveRule}>
+          <div className="form-field">
+            <label className="form-label">网页地址规则</label>
+            <input className="input input-solid " placeholder="输入网页地址规则" type="text" id="name" required onChange={(e) => setDomain(e.target.value)} value={domain} />
+            <label className="form-label">
+              <span className="text-sm form-label-alt text-indigo-600">小心修改，  如，example.com/path* , *.example.com/path, file.exmaple.com</span>
+            </label>
+          </div>
+          <div className="form-field">
+            <label className="form-label" htmlFor="message">匹配的选择器 (以及规则）</label>
+            <input className="input input-solid max-w-full" id="message" placeholder="输入样式规则，可参考下方预览里内容" required onChange={(e) => setData(e.target.value)} value={data} />
+            <label className="form-label">
+              <span className="form-label-alt text-orange-600">谨慎修改</span>
+            </label>
+          </div>
+          <div className="form-field">
+            <label className="form-label">类型</label>
+            <div className="form-control">
+              <select className="select" defaultValue={type} onChange={(e) => setType(e.target.value as RuleActionType)}>
+                <option value={RuleActionType.autoHide}>自动隐藏元素（页面打开时生效）</option>
+                <option value={RuleActionType.autoClick}>自动点击元素（页面打开时生效）</option>
+                <option value={RuleActionType.autoNavigate}>自动跳转元素（页面打开时生效）</option>
+                <option value={RuleActionType.insertCSS}>注入样式（页面打开期间生效）</option>
+              </select>
+            </div>
+          </div>
+          <div className="form-field">
+            <label className="form-label">规则名称</label>
+            <input className="input input-solid" id="name" placeholder="输入对样式规则对描述，便于区别" required onChange={(e) => setName(e.target.value)} value={name} />
+            <label className="form-label">
+              <span className="form-label-alt text-green-700">建议修改，设置为容易记忆的名称</span>
+            </label>
+          </div>
+          <div className="form-field">
+            <div className="form-control justify-between">
+              <button type="submit" style={{
+                width: 200
+              }} className="rounded-lg btn btn-primary btn-block">保存</button>
+              <button className="btn" onClick={()=>{
+                onClose();
+              }}>放弃</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>;
 }
 
 export default Content

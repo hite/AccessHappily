@@ -11,7 +11,8 @@ export interface IRuleAction {
   type: RuleActionType,
   name: string,
   data: string,
-  disabled?: boolean
+  disabled?: boolean,
+  exampleUrl?: string // 使用工具生成是记住操作的地址；
 }
 export interface IRule {
   [key: string]: Array<IRuleAction>
@@ -87,6 +88,38 @@ export async function disableRules(url: string, rule: IRuleAction) {
   await storage.set(kDisabledRule, disabled);
 }
 
+// generate selector from dom hierarchy
+export function getSelector(_target: Element): string {
+  if(!_target) {
+    console.error('pass nonnull element');
+    return;
+  }
+
+  let classList: string[] = [];
+  let stop = false;
+  while(!stop && _target) {
+    let clsName: any = _target.className;
+    if(clsName && typeof clsName === 'object') {
+      // for svg/path
+      _target = _target.parentElement;
+      continue;
+    }
+    if(_target == document.body) {
+      classList.push('body');
+      stop = true;
+    } else if(_target.id) {
+      classList.push(`#${_target.id}`);
+      stop = true;
+    } else {
+      let classNameList = clsName.split(' ').filter((o)=>{return o && o.length > 0});// replace(' ', '.')
+      if(classNameList.length > 0) {
+        classList.push('.' + classNameList.join('.'));
+      }
+      _target = _target.parentElement;
+    }
+  }
+  return classList.reverse().join(' ');
+}
 
 async function getAllRules() {
   // 合并自定义和订阅

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { RuleActionType, builtinRule } from "~rules";
+
+import { FaQuestionCircle } from "react-icons/fa";
 import "./style.css";
 
 import { isMatched } from "~rules";
@@ -9,6 +11,16 @@ import { Storage } from "@plasmohq/storage"
 const storage = new Storage()
 const kUniKey = 'KeyOfRuleForDomains';
 const kRemoteRule = 'kRemoteRuleForDomains';
+
+function HelpText({text}:{text: string}) {
+  const [show, setShow] = useState(false);
+  return <label className="form-label">
+    <FaQuestionCircle className="link text-blue-500" onClick={()=>{
+      setShow(!show);
+    }}/>
+    {show?<span className="form-label-alt "> {text}</span>: null}
+</label>
+}
 
 function IndexPopup() {
   const [domain, setDomain] = useState("")
@@ -64,44 +76,55 @@ function IndexPopup() {
 
   return (<section className="bg-gray-2 rounded-xl">
     <div className="p-8 shadow-lg">
-      <h2 className="text-lg font-medium p-2">
+      <h2 className="text-lg font-medium pt-2 pb-4">
         添加规则 (新规则覆盖旧规则)
       </h2>
-      <form className="space-y-4" onSubmit={saveRule}>
-        <div className="w-full">
-          <label className="sr-only" htmlFor="name">网页地址前缀</label>
-          <input className="input input-solid " placeholder="输入网页地址规则" type="text" id="name" required onChange={(e) => setDomain(e.target.value)} value={domain} />
-          <span className="text-sm">  如，example.com/path* , *.example.com/path, file.exmaple.com</span>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <label className="sr-only" htmlFor="email">类型</label>
-            <select className="select" defaultValue={type} onChange={(e) => setType(e.target.value as RuleActionType)}>
-              <option value={RuleActionType.autoHide}>自动隐藏元素（页面打开时生效）</option>
-              <option value={RuleActionType.autoClick}>自动点击元素（页面打开时生效）</option>
-              <option value={RuleActionType.autoNavigate}>自动跳转元素（页面打开时生效）</option>
-              <option value={RuleActionType.insertCSS}>注入样式（页面打开期间生效）</option>
-            </select>
+      
+      <form className="form-group" style={{
+        gap: '1.25rem'
+      }} onSubmit={saveRule}>
+          <div className="form-field">
+            <div className="flex flex-row items-center gap-1">
+              <label className="text-base">网页地址规则</label>
+              <HelpText text="如，example.com/path* , *.example.com/path, file.exmaple.com" />
+            </div>
+            <input className="input input-solid " placeholder="输入网页地址规则" type="text" id="name" required onChange={(e) => setDomain(e.target.value)} value={domain} />
           </div>
-        </div>
-
-        <div className="w-full">
-          <label className="sr-only" htmlFor="message">匹配的选择器( ID / className / tag 选择器均可)</label>
-          <input className="input input-solid max-w-full" id="message" placeholder="输入样式规则，可参考下方预览里内容" required onChange={(e) => setData(e.target.value)} value={data} />
-        </div>
-        <div>
-          <label className="sr-only" htmlFor="name">规则名称</label>
-          <input className="input input-solid" id="name" placeholder="输入对样式规则对描述，便于区别" required onChange={(e) => setName(e.target.value)} value={name} />
-        </div>
-        <div className="mt-4">
-          <button type="submit" style={{
-            width: 200
-          }} className="rounded-lg btn btn-primary btn-block">保存</button>
-        </div>
-      </form>
-
+          <div className="form-field">
+            <div className="flex flex-row items-center gap-1">
+              <label className="text-base" htmlFor="message">匹配的选择器 (以及规则）</label>
+              <HelpText text="如，.modals .modal__login .close , .passport-container-mini &#123; display: none !important;&#125; (注入样式)" />
+            </div>
+            <input className="input input-solid max-w-full" id="message" placeholder="输入样式规则，可参考下方预览里内容" required onChange={(e) => setData(e.target.value)} value={data} />
+          </div>
+          <div className="form-field">
+            <label className="text-base">类型</label>
+            <div className="form-control">
+              <select className="select" defaultValue={type} onChange={(e) => setType(e.target.value as RuleActionType)}>
+                <option value={RuleActionType.autoHide}>自动隐藏元素（页面打开时生效）</option>
+                <option value={RuleActionType.autoClick}>自动点击元素（页面打开时生效）</option>
+                <option value={RuleActionType.autoNavigate}>自动跳转元素（页面打开时生效）</option>
+                <option value={RuleActionType.insertCSS}>注入样式（页面打开期间生效）</option>
+              </select>
+            </div>
+          </div>
+          <div className="form-field">
+            <div className="flex flex-row items-center gap-1">
+              <label className="text-base">规则名称</label>
+              <HelpText text="设置为容易记忆的名称" />
+            </div>
+            <input className="input input-solid" id="name" placeholder="输入对样式规则对描述，便于区别" required onChange={(e) => setName(e.target.value)} value={name} />
+          </div>
+          <div className="form-field">
+            <div className="form-control justify-between">
+              <button type="submit" style={{
+                width: 200
+              }} className="rounded-lg btn btn-primary btn-block">保存</button>
+            </div>
+          </div>
+        </form>
     </div>
+
     <div id="preview" className="p-6">
       <div className="flex flex-row gap-2 items-center">
           <span className="text-lg font-medium">当前生效的规则预览 </span>
