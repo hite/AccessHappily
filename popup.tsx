@@ -52,9 +52,6 @@ function Popup() {
       // }
       return <tr key={idx}>
       <th>{idx + 1}</th>
-      <td>{o.type}</td>
-      <td>{o.name || '<no-name>'}</td>
-      <td>{o.data}</td>
       <td>
         <div>
           <label className="flex cursor-pointer gap-2">
@@ -77,6 +74,9 @@ function Popup() {
         </div>
         {desc}
       </td>
+      <td>{o.type}</td>
+      <td>{o.name || '<no-name>'}</td>
+      <td>{o.data}</td>
     </tr>
     });
   }
@@ -102,10 +102,10 @@ function Popup() {
             <thead>
               <tr>
                 <th>序号</th>
+                <th>操作(下次刷新生效)</th>
                 <th>类型</th>
                 <th>名称</th>
                 <th>规则</th>
-                <th>操作(下次刷新生效)</th>
               </tr>
             </thead>
             <tbody>
@@ -115,7 +115,7 @@ function Popup() {
         </div>
       </div>
 
-      <div className="font-bold flex flex-row gap-1 items-center text-blue-600 pt-4 pb-2">
+      <div className="font-bold flex flex-row gap-1 items-center text-blue-600 pt-4 pb-2 text-sm">
         <IoMdSettings /><a href="/options.html" target="_blank">进入设置</a>{" "}
       </div>
     </div>

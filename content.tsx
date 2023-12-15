@@ -179,6 +179,7 @@ function Content() {
     };
     if (document.readyState == 'complete') {
       loadCache();
+      listenContextMenuShow();
     } else {
       window.addEventListener('load', () => {
         loadCache();
@@ -214,7 +215,10 @@ function Warning({ message, autoHideCallback }: { message: string, autoHideCallb
   }, []);
   return <div style={{
     backgroundColor: "yellow",
-    width: "100%"
+    position: "fixed",
+    minWidth:400,
+    left:0,
+    top:0
   }}>
     <div style={{
       display: "flex",
@@ -262,7 +266,7 @@ function AddPanel({selector, onClose}:{selector: string, onClose: Function}) {
     }
   }
 
-  return <div className="cl-s bg-white w-96 p-4 fixed">
+  return <div className="cl-s bg-backgroundPrimary w-96 p-4 fixed">
       <div className="mx-auto flex w-full max-w-sm flex-col gap-6">
         <div className="flex flex-col gap-1">
           <h1 className="text-3xl font-semibold">手动添加规则 （beta）</h1>
