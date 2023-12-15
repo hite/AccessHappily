@@ -135,7 +135,7 @@ function Content() {
         let type = obj.type, data = obj.data;
         if (type == 'insertCSS') {
           setStyle(data, obj.name);
-          showTips('已注入样式');
+          showTips('已注入样式， 规则名 ：' + obj.name);
           logRule(obj);
           continue;
         }
@@ -156,15 +156,15 @@ function Content() {
         if (element) {
           if (type == 'autoHide') {
             element.style = 'display:none !important';
-            showTips('已自动隐藏登录提示弹窗')
+            showTips('已自动隐藏登录提示弹窗， 规则名 ：' + obj.name)
           } else if (type == 'autoNavigate') {
             let link = element.value || element.innerText;
-            showTips('已自动跳转到页面 ' + link);
+            showTips('已自动跳转到页面 ' + link + '， 规则名 ：' + obj.name);
             window.setTimeout(() => {
               window.location.assign(link);
             }, 1000);
           } else {
-            showTips('已自动点击元素')
+            showTips('已自动点击元素， 规则名 ：' + obj.name)
             window.setTimeout(() => {
               element.click();
             }, 1000);
