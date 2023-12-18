@@ -85,10 +85,21 @@ function IndexPopup() {
       }} onSubmit={saveRule}>
           <div className="form-field">
             <div className="flex flex-row items-center gap-1">
-              <label className="text-base">网页地址规则</label>
+              <label className="text-base">匹配网页地址规则</label>
               <HelpText text="如，example.com/path* , *.example.com/path, file.exmaple.com" />
             </div>
             <input className="input input-solid " placeholder="输入网页地址规则" type="text" id="name" required onChange={(e) => setDomain(e.target.value)} value={domain} />
+          </div>
+          <div className="form-field">
+            <label className="text-base">类型</label>
+            <div className="form-control">
+              <select className="select" defaultValue={type} onChange={(e) => setType(e.target.value as RuleActionType)}>
+                <option value={RuleActionType.autoHide}>自动隐藏元素</option>
+                <option value={RuleActionType.autoClick}>自动点击元素</option>
+                <option value={RuleActionType.autoNavigate}>自动跳转元素</option>
+                <option value={RuleActionType.insertCSS}>注入样式</option>
+              </select>
+            </div>
           </div>
           <div className="form-field">
             <div className="flex flex-row items-center gap-1">
@@ -96,17 +107,6 @@ function IndexPopup() {
               <HelpText text="如，.modals .modal__login .close , .passport-container-mini &#123; display: none !important;&#125; (注入样式)" />
             </div>
             <input className="input input-solid max-w-full" id="message" placeholder="输入样式规则，可参考下方预览里内容" required onChange={(e) => setData(e.target.value)} value={data} />
-          </div>
-          <div className="form-field">
-            <label className="text-base">类型</label>
-            <div className="form-control">
-              <select className="select" defaultValue={type} onChange={(e) => setType(e.target.value as RuleActionType)}>
-                <option value={RuleActionType.autoHide}>自动隐藏元素（页面打开时生效）</option>
-                <option value={RuleActionType.autoClick}>自动点击元素（页面打开时生效）</option>
-                <option value={RuleActionType.autoNavigate}>自动跳转元素（页面打开时生效）</option>
-                <option value={RuleActionType.insertCSS}>注入样式（页面打开期间生效）</option>
-              </select>
-            </div>
           </div>
           <div className="form-field">
             <div className="flex flex-row items-center gap-1">
@@ -379,7 +379,7 @@ function TableList({ data, onUpdateData }: { data: Array<RemoteRule>, onUpdateDa
 
   
   let trs = [<tr>
-    <th className="p-2" colSpan={4}>无生效的规则</th>
+    <th className="p-2" colSpan={4}>无可用的订阅地址</th>
   </tr>]
   if (data.length > 0) {
     trs = data.map((item, idx) => {
