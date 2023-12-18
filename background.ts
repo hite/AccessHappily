@@ -24,12 +24,30 @@ const handleContextMenus = () => {
         console.log(menu);
       chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
         chrome.tabs.sendMessage(tabs[0].id, {
-            action: 'detectElement',
-            menuId: menu.menuItemId
+            action: menu.menuItemId
         });
       });
     });
   };
 
   handleContextMenus();
+
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    // 2. A page requested user data, respond with a copy of `user`
+    if (message.action === 'logRuleExecuted') {
+      chrome.tabs.query({currentWindow: true, active: true}, function (tabs){
+        var activeTab = tabs[0];
+        
+        chrome.action.setBadgeText(
+          {
+            text: '' + message.data,
+            tabId: activeTab.id
+          },
+          () => {  }
+        );
+      });
+    }
+  });
+  
+  
 /////////

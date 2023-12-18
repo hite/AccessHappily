@@ -93,7 +93,7 @@ function Popup() {
         <div className="flex items-center gap-1 py-3">
           <span className="dot dot-secondary"></span>
           <h1 className="text-lg font-semibold">适配本页面的规则</h1>
-          <div className="tooltip tooltip-top" data-tooltip="管理本页面当前生效的规则">
+          <div className="tooltip tooltip-top" data-tooltip="启用和禁用在下次刷新时生效">
             <FaQuestionCircle />
           </div>
         </div>
@@ -102,7 +102,7 @@ function Popup() {
             <thead>
               <tr>
                 <th>序号</th>
-                <th>操作(下次刷新生效)</th>
+                <th>操作</th>
                 <th>类型</th>
                 <th>名称</th>
                 <th>规则</th>

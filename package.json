@@ -39,7 +39,8 @@
       "https://*/*"
     ],
     "permissions": [
-      "contextMenus"
+      "contextMenus",
+      "activeTab"
     ]
   }
 }

@@ -35,8 +35,13 @@ const setStyle = (styleText, num) => {
 }
 
 const activeRules = [];
-function logRule(_rule) {
+async function logRule(_rule) {
   activeRules.push(_rule);
+
+  sendToPop({
+    action: 'logRuleExecuted',
+    data: activeRules.length
+  });
 }
 
 function nativeTreeWalker(targetContent) {
@@ -96,6 +101,102 @@ function listenContextMenuShow() {
   }, false);
 }
 
+let insertCSSHandler = async (onActionDone: (message: string)=> void) => {
+  console.log('loadCache');
+  const ruleList = await getRules(window.location.href);
+  for (let idx2 = 0; idx2 < ruleList.length; idx2++) {
+    const obj: any = ruleList[idx2];
+    let type = obj.type, data = obj.data;
+    
+    if(type == RuleActionType.insertCSS) {
+      if(obj.disabled) {
+        logRule(obj)
+        continue;
+      }
+      setStyle(data, obj.name);
+      sendToPop(obj);// 记住执行过的规则
+      onActionDone('已注入样式， 规则名 ：' + obj.name);
+      logRule(obj);
+    }
+  }
+};
+
+let loadProcessHandler = async (onActionDone: (message: string)=> void) => {
+  console.log('loadProcessHandler');
+  const ruleList = await getRules(window.location.href);
+  for (let idx2 = 0; idx2 < ruleList.length; idx2++) {
+    const obj: any = ruleList[idx2];
+    
+    let type = obj.type, data = obj.data;
+    if(type == RuleActionType.insertCSS) {
+      continue;
+    }
+    if(obj.disabled) {
+      logRule(obj);
+      continue;
+    }
+
+    let element = null;
+    if (data.startsWith(':contains(')) {
+      // :contains('继续前往')
+      let rawContent = data.replace(':contains(', '');
+      let targetContent = rawContent.substring(1, rawContent.length - 2);
+      let textNode = nativeTreeWalker(targetContent);
+
+      if (textNode) {
+        element = textNode.parentNode;
+      }
+    } else {
+      element = document.querySelector(data);
+    }
+
+    if (element && !element.ac_processing) {
+      element.ac_processing = true;
+      if (type ==  RuleActionType.autoHide) {
+        element.style = 'display:none !important';
+        onActionDone('已自动隐藏登录提示弹窗， 规则名 ：' + obj.name)
+        element.ac_processing = false;
+      } else if (type == RuleActionType.autoNavigate) {
+        let link = element.value || element.innerText;
+        onActionDone('已自动跳转到页面 ' + link + '， 规则名 ：' + obj.name);
+        window.setTimeout(() => {
+          window.location.assign(link);
+          element.ac_processing = false;
+        }, 1000);
+      } else {
+        onActionDone('已自动点击元素， 规则名 ：' + obj.name)
+        window.setTimeout(() => {
+          element.click();
+          element.ac_processing = false;
+        }, 1000);
+      }
+      //
+      sendToPop(obj);
+      logRule(obj);
+    } else if (element && element.ac_processing) {
+      console.info('the element is processing: ', element);
+    } else {
+      console.info('Not found target node for selector: ' + data);
+    }
+  }
+  //
+  listenContextMenuShow();
+};
+
+let bounce = -1;
+let onElementAdded = function (mutationsList, checkHandler) {
+  for (let mutation of mutationsList) {
+    if (mutation.addedNodes && mutation.addedNodes.length > 0) {
+      if(bounce !== -1) {
+        window.clearTimeout(bounce);
+      }
+      bounce = window.setTimeout(()=>{
+        checkHandler();
+        bounce = -1;
+      }, 1500);
+    }
+  }
+};
 
 function Content() {
   console.log(document.readyState);
@@ -122,70 +223,25 @@ function Content() {
   },[]);
 
   useEffect(() => {
-    let loadCache = async () => {
-      console.log('loadCache');
-      const ruleList = await getRules(window.location.href);
-      for (let idx2 = 0; idx2 < ruleList.length; idx2++) {
-        const obj: any = ruleList[idx2];
-        
-        if(obj.disabled) {
-          logRule(obj)
-          continue;
-        }
-        let type = obj.type, data = obj.data;
-        if (type == 'insertCSS') {
-          setStyle(data, obj.name);
-          showTips('已注入样式， 规则名 ：' + obj.name);
-          logRule(obj);
-          continue;
-        }
-        let element = null;
-        if (data.startsWith(':contains(')) {
-          // :contains('继续前往')
-          let rawContent = data.replace(':contains(', '');
-          let targetContent = rawContent.substring(1, rawContent.length - 2);
-          let textNode = nativeTreeWalker(targetContent);
+    // 尽早的植入
+    insertCSSHandler((msg)=>{
+      showTips(msg);
+    });
 
-          if (textNode) {
-            element = textNode.parentNode;
-          }
-        } else {
-          element = document.querySelector(data);
-        }
-
-        if (element) {
-          if (type == 'autoHide') {
-            element.style = 'display:none !important';
-            showTips('已自动隐藏登录提示弹窗， 规则名 ：' + obj.name)
-          } else if (type == 'autoNavigate') {
-            let link = element.value || element.innerText;
-            showTips('已自动跳转到页面 ' + link + '， 规则名 ：' + obj.name);
-            window.setTimeout(() => {
-              window.location.assign(link);
-            }, 1000);
-          } else {
-            showTips('已自动点击元素， 规则名 ：' + obj.name)
-            window.setTimeout(() => {
-              element.click();
-            }, 1000);
-          }
-          //
-          sendToPop(obj);
-          logRule(obj);
-        } else {
-          console.info('Not found target node for selector: ' + data);
-        }
-      }
-    };
-    if (document.readyState == 'complete') {
-      loadCache();
-      listenContextMenuShow();
-    } else {
-      window.addEventListener('load', () => {
-        loadCache();
-        listenContextMenuShow();
+    let executeRule = function(){
+      loadProcessHandler((msg)=>{
+        showTips(msg);
       });
-    }
+    };
+    // first attempt to hide\click
+    executeRule();
+    // 2nd attempt to hide\click
+    // add domChanging observer
+    let observer = new MutationObserver(function(mutationsList) {
+      onElementAdded(mutationsList, executeRule);
+    });
+    observer.observe(document, { childList: true, subtree: true });
+
   }, []);
 
   let UI = <span />;
