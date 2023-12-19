@@ -50,6 +50,10 @@ function IndexPopup() {
     }
   }
 
+  // let updateJSON = '';
+  let updateJSON = {
+    updated: ''
+  };
   const saveRawRule = async () => {
     try {
       await storage.set(kUniKey, editorContent);
@@ -139,9 +143,6 @@ function IndexPopup() {
         flexDirection: 'column',
         minHeight: 500
       }} id="editor">
-        <div>
-         
-        </div>
         <div className="my-editor">
           <VanillaJSONEditor
             content={{
@@ -151,17 +152,24 @@ function IndexPopup() {
             readOnly={onlyView}
             onChange={(input) => {
               console.log('VanillaJSONEditor', input);
-              let json = input.json;
-              if (!json) {
-                json = JSON.parse(input.text);
+              updateJSON.updated = input.text || input.json;
+            }}
+            onBlur={()=>{
+              let json = editorContent;
+              console.log('onblur',updateJSON);
+              if (updateJSON.updated) {
+                if(typeof updateJSON.updated === 'string') {
+                  json = JSON.parse(updateJSON.updated);
+                } else {
+                  json = updateJSON.updated;
+                }
+                updateJSON.updated = null;
               }
               setEditorContent(json);
             }}
           />
         </div>
-        
         <div className="flex flex-row">
-
           <button className="btn btn-solid-error" style={{
             width: 200
           }} onClick={saveRawRule} disabled={onlyView} >保存( 谨慎使用) </button>
@@ -343,7 +351,7 @@ function AddSub({ onDataAdded }: { onDataAdded: (val: RemoteRule) => void }) {
       <div className="form-field">
         <label className="form-label">规则描述</label>
 
-        <input required placeholder="起个名字" type="text" className="input " value={name} onChange={(e) => setName(e.target.value)} />
+        <input required placeholder="为规则起个名字，方便后面管理" type="text" className="input " value={name} onChange={(e) => setName(e.target.value)} />
       </div>
       <div style={{ display: showLoading }}>
         <div className="spinner-dot-intermittent"></div><span className="text-blue-500">获取远端内容...</span>
@@ -445,7 +453,7 @@ function TableList({ data, onUpdateData }: { data: Array<RemoteRule>, onUpdateDa
             }}
             mode="text"
             readOnly={true}
-            onChange={(input) => { console.log('VanillaJSONEditor', input); }}
+            // onChange={(input) => { console.log('VanillaJSONEditor', input); }}
           />
         </div>
         <div className="flex gap-3">

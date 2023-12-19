@@ -6,7 +6,6 @@ import { RuleActionType, builtinRule } from "~rules";
 // 这里很关键：引入基础样式，否则按钮没有背景色（rippleUI）
 import "./style.css";
 
-import VanillaJSONEditor from "./VanillaJSONEditor";
 
 import { Storage } from "@plasmohq/storage"
 const storage = new Storage()
@@ -23,14 +22,15 @@ export const getStyle: PlasmoGetStyle = () => {
 }
 
 const kEventKeyContextMenus = 'kEventKeyContextMenus';
+const kEventKeyEnableCopy = 'kEventKeyEnableCopy';
 // const eventEmitter = new EventEmitter();
 
 const setStyle = (styleText, num) => {
   const style = document.createElement("style")
   style.textContent = styleText
   style.type = "text/css";
-  style.id = 'ah_style_' + num;
-  style.setAttribute('data-name', 'access-happily');
+  style.id = 'access-happily';
+  style.setAttribute('data-name', 'ah_style_' + num);
   document.head.appendChild(style);
 }
 
@@ -69,6 +69,8 @@ function sendToPop(_data) {
 }
 
 // Listen for messages from the popup.
+const kEnableCopyCssText = '*{user-select: text !important;-webkit-user-select: text !important;-webkit-touch-callout: text !important;}';
+
 chrome.runtime.onMessage.addListener((msg, sender, response) => {
   console.log('content script', msg);
   let action = msg.action;
@@ -82,6 +84,11 @@ chrome.runtime.onMessage.addListener((msg, sender, response) => {
         eventEmitter.emit(kEventKeyContextMenus);
       }
       break;
+    case 'enableCopyText':
+        {
+          eventEmitter.emit(kEventKeyEnableCopy);
+        }
+        break;
     case 'getActiveRules':
       response(activeRules);
       break;
@@ -111,8 +118,10 @@ let insertCSSHandler = async (onActionDone: (message: string)=> void) => {
     if(type == RuleActionType.insertCSS) {
       if(obj.disabled) {
         logRule(obj)
+        console.log('obj.disabled');
         continue;
       }
+      console.log('setStyle', obj);
       setStyle(data, obj.name);
       sendToPop(obj);// 记住执行过的规则
       onActionDone('已注入样式， 规则名 ：' + obj.name);
@@ -204,6 +213,8 @@ function Content() {
   const [tips, setTips] = useState('已自动隐藏登录提示弹窗');
 
   const [selector, setSelector] = useState(null);
+  const [ruleName, setRuleName] = useState('规则名称');
+  const [ruleType, setRuleType] = useState(RuleActionType.autoHide);
   const [showPanel, setShowPanel] = useState(false);
 
   const showTips = (msg) => {
@@ -218,6 +229,14 @@ function Content() {
         setSelector(selector);
         lastRightClickedElement = null;
       }
+      const titleName = document.title || '<no_title_page>';
+      setRuleName(titleName);
+      setShowPanel(true);
+    });
+    eventEmitter.add(kEventKeyEnableCopy, ()=>{
+      setRuleName('去掉不可复制的限制');
+      setSelector(kEnableCopyCssText);
+      setRuleType(RuleActionType.insertCSS);
       setShowPanel(true);
     });
   },[]);
@@ -247,7 +266,7 @@ function Content() {
   let UI = <span />;
   if (showPanel) {
     if(selector) {
-      UI = <AddPanel selector={selector} onClose={()=>{
+      UI = <AddPanel selector={selector} ruleType={ruleType} ruleName={ruleName} onClose={()=>{
         setShowPanel(false);
       }} />
     } else {
@@ -286,26 +305,22 @@ function Warning({ message, autoHideCallback }: { message: string, autoHideCallb
   </div>
 }
 
-function AddPanel({selector, onClose}:{selector: string, onClose: Function}) {
+function AddPanel({selector, ruleType, ruleName, onClose}:{selector: string, ruleType:RuleActionType, ruleName: string, onClose: Function}) {
   
   const [data, setData] = useState(selector);
 
   const location = document.location;
-  let urlPrefix = location.host + location.pathname + '*';
+  let urlPrefix = location.host + location.pathname + '/*';
 
   const [domain, setDomain] = useState(urlPrefix)
-  const [type, setType] = useState(RuleActionType.autoHide)
-
-  const titleName = document.title || '<no_title_page>';
-  const [name, setName] = useState(titleName);
-
-  const [editorContent, setEditorContent] = useState({});
+  const [type, setType] = useState(ruleType)
+  const [name, setName] = useState(ruleName);
 
   const saveRule = async () => {
     let rule: IRuleAction = { type, name, data}
     rule.exampleUrl = document.location.href;
     let ruleJSON = await storage.get(kUniKey) || {};
- 
+    
     let ruleForDomain = ruleJSON[domain];
     if (!ruleForDomain) {
       ruleForDomain = [];
@@ -315,7 +330,6 @@ function AddPanel({selector, onClose}:{selector: string, onClose: Function}) {
 
     try {
       await storage.set(kUniKey, ruleJSON);
-      setEditorContent(ruleJSON);
       alert('保存成功');
     } catch (error) {
       alert('出错了：' + error.message);
@@ -326,7 +340,7 @@ function AddPanel({selector, onClose}:{selector: string, onClose: Function}) {
       <div className="mx-auto flex w-full max-w-sm flex-col gap-6">
         <div className="flex flex-col gap-1">
           <h1 className="text-3xl font-semibold">手动添加规则 （beta）</h1>
-          <p className="text-xs text-yellow-600">以下生成规则大部分情况下不需要修改，除非你懂</p>
+          <p className="text-xs text-yellow-600">以下生成规则大部分情况下不需要修改，除非你懂 HTML</p>
         </div>
         <form className="form-group" onSubmit={saveRule}>
           <div className="form-field">
@@ -347,10 +361,10 @@ function AddPanel({selector, onClose}:{selector: string, onClose: Function}) {
             <label className="form-label">类型</label>
             <div className="form-control">
               <select className="select" defaultValue={type} onChange={(e) => setType(e.target.value as RuleActionType)}>
-                <option value={RuleActionType.autoHide}>自动隐藏元素（页面打开时生效）</option>
-                <option value={RuleActionType.autoClick}>自动点击元素（页面打开时生效）</option>
-                <option value={RuleActionType.autoNavigate}>自动跳转元素（页面打开时生效）</option>
-                <option value={RuleActionType.insertCSS}>注入样式（页面打开期间生效）</option>
+                <option value={RuleActionType.autoHide}>自动隐藏元素</option>
+                <option value={RuleActionType.autoClick}>自动点击元素</option>
+                <option value={RuleActionType.autoNavigate}>自动跳转元素</option>
+                <option value={RuleActionType.insertCSS}>注入样式</option>
               </select>
             </div>
           </div>

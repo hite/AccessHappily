@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from "react";
-import { IoMdSettings } from "react-icons/io";
+import { IoMdSettings, IoIosCopy} from "react-icons/io";
+import { FaExternalLinkAlt } from "react-icons/fa";
 import { FaQuestionCircle } from "react-icons/fa";
 import "./style.css";
 import { disableRules, type IRuleAction } from "~rules";
@@ -28,15 +29,13 @@ function Popup() {
     });
   }, []);
 
-  const updateDisabled = (rule: IRuleAction)=>{
-    // 更新规则
-    chrome.tabs.query({currentWindow: true, active: true}, function (tabs){
-      var activeTab = tabs[0];
-      let url = activeTab.url;
-      // 更新规则
-      disableRules(url, rule);
+  const createNewRule = ()=>{
+    chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+      chrome.tabs.sendMessage(tabs[0].id, {
+          action: 'enableCopyText'
+      });
     });
-  };
+  }
 
   let trs = [<tr>
     <th className="py-2" colSpan={4}>无生效的规则</th>
@@ -67,7 +66,7 @@ function Popup() {
               // update UI
               setData(newData);
               // save to cache
-              updateDisabled(o);
+              disableRules(o);
             }}/>
             <span>启用</span>
           </label>
@@ -85,14 +84,14 @@ function Popup() {
     <div
       style={{
         padding: 12,
-        minWidth: 350
+        minWidth: 420
       }} className="flex flex-col gap-2">
-      <h4 className="font-bold text-sm text-teal-600">欢迎使用 AccessHappily</h4>
+      <h4 className="font-bold text-lg text-teal-600">欢迎使用 AccessHappily</h4>
       <div>
         <p>{message}</p>
         <div className="flex items-center gap-1 py-3">
           <span className="dot dot-secondary"></span>
-          <h1 className="text-lg font-semibold">适配本页面的规则</h1>
+          <h1 className="text-sm font-semibold">适配本页面的规则</h1>
           <div className="tooltip tooltip-top" data-tooltip="启用和禁用在下次刷新时生效">
             <FaQuestionCircle />
           </div>
@@ -115,8 +114,13 @@ function Popup() {
         </div>
       </div>
 
-      <div className="font-bold flex flex-row gap-1 items-center text-blue-600 pt-4 pb-2 text-sm">
-        <IoMdSettings /><a href="/options.html" target="_blank">进入设置</a>{" "}
+      <div className=" border-indigo-500 flex flex-row justify-between">
+        <div className="font-bold flex flex-row gap-1 items-center text-blue-600 pt-4 pb-2 text-sm">
+          <FaExternalLinkAlt /><a href="/options.html" target="_blank">进入设置</a>{" "} 
+        </div>
+        <div className="font-bold flex flex-row gap-1 items-center text-blue-600 pt-4 pb-2 text-sm cursor-pointer" onClick={createNewRule}>
+          <IoIosCopy /> 一键去除复制限制
+        </div>
       </div>
     </div>
   )

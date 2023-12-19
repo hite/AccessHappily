@@ -12,6 +12,7 @@ export interface IRuleAction {
   name: string,
   data: string,
   disabled?: boolean,
+  _domain?: string, // 冗余 IRule 对象里的 key 值，用于 disabled rule 的定位
   exampleUrl?: string // 使用工具生成是记住操作的地址；
 }
 export interface IRule {
@@ -77,15 +78,24 @@ const kUniKey = 'KeyOfRuleForDomains';
 const kRemoteRule = 'kRemoteRuleForDomains';
 const kDisabledRule = 'kDisabledRule';
 
-export async function disableRules(url: string, rule: IRuleAction) {
+export async function disableRules(rule: IRuleAction) {
   let disabled: any = await storage.get(kDisabledRule);
   if(!disabled) {
     disabled = {};
   }
   // trim query objects
-  let newUrl = url.split('?')[0];
-  disabled[newUrl] =  rule;
-  await storage.set(kDisabledRule, disabled);
+  let domain = rule._domain;
+  if(domain) {
+    if(rule.disabled) {
+      disabled[domain] =  rule;
+      await storage.set(kDisabledRule, disabled);
+    } else {
+      let succ = delete disabled[domain];
+      console.log('Remove rule from list, succ = ' + succ);
+    }
+  } else {
+    console.error('legacy data', rule);
+  }
 }
 
 // generate selector from dom hierarchy
@@ -143,7 +153,7 @@ async function getAllRules() {
 async function isRuleIgnored(domain: string, activeRule: IRuleAction): Promise<boolean> {
   let rules: any = await storage.get(kDisabledRule);
   for(const shortUrl in rules) {
-    if(isMatched(domain, shortUrl)) {
+    if(domain == shortUrl) {
       let disabledItem = rules[shortUrl];
       if(activeRule.data == disabledItem.data && activeRule.type == disabledItem.type && activeRule.name == disabledItem.name) {
         return true;
@@ -154,7 +164,7 @@ async function isRuleIgnored(domain: string, activeRule: IRuleAction): Promise<b
 }
 
 export async function getRules(href: string) {
-  // 合并自定义和订阅
+  // 合并自定义和订阅规则
   // 相同的 key 以后面的规则为准
   let rules: IRule = await getAllRules();
 
@@ -171,7 +181,8 @@ export async function getRules(href: string) {
         if(obj.disabled) {
           console.log('ignore disabled rule', obj);
         }
-
+        // 复制是为了 disabled 状态管理
+        obj._domain = domain;
         matchedRules.push(obj);
       }
     }
