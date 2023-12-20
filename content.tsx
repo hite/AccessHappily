@@ -289,11 +289,12 @@ function Warning({ message, autoHideCallback }: { message: string, autoHideCallb
     }, 4000);
   }, []);
   return <div style={{
-    backgroundColor: "yellow",
+    backgroundColor: "red",
     position: "fixed",
     minWidth:400,
     left:0,
-    top:0
+    top:0,
+    padding: 4
   }}>
     <div style={{
       display: "flex",
@@ -335,6 +336,20 @@ function AddPanel({selector, ruleType, ruleName, onClose}:{selector: string, rul
       alert('出错了：' + error.message);
     }
   }
+
+  // 确保弹窗的 root fontSize 不受影响
+  useEffect(()=>{
+    let root = document.querySelector('html');
+    let orig = window.getComputedStyle(root).getPropertyValue('font-size');
+    if(orig != '16px') {
+      root.style['font-size'] =  '16px';
+    }
+    return ()=>{
+      if(orig != '16px') {
+        root.style['font-size'] =  orig;
+      }
+    }
+  },[]);
 
   return <div className="cl-s bg-backgroundPrimary w-96 p-4 fixed">
       <div className="mx-auto flex w-full max-w-sm flex-col gap-6">

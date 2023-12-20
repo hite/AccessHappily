@@ -49,6 +49,10 @@ function Popup() {
       // } else if(['insertCSS'].includes(o.type)){
       //   desc = '下次刷新生效'
       // }
+      let ruleName = o.name || '<no-name>';
+      if(ruleName.length > 10) {
+        ruleName = ruleName.substring(0, 10) + '...';
+      }
       return <tr key={idx}>
       <th>{idx + 1}</th>
       <td>
@@ -74,7 +78,7 @@ function Popup() {
         {desc}
       </td>
       <td>{o.type}</td>
-      <td>{o.name || '<no-name>'}</td>
+      <td title={o.name}>{ruleName}</td>
       <td>{o.data}</td>
     </tr>
     });
@@ -91,7 +95,7 @@ function Popup() {
         <p>{message}</p>
         <div className="flex items-center gap-1 py-3">
           <span className="dot dot-secondary"></span>
-          <h1 className="text-sm font-semibold">适配本页面的规则</h1>
+          <h1 className="text-sm font-semibold">适用于本页面的规则</h1>
           <div className="tooltip tooltip-top" data-tooltip="启用和禁用在下次刷新时生效">
             <FaQuestionCircle />
           </div>
@@ -119,7 +123,7 @@ function Popup() {
           <FaExternalLinkAlt /><a href="/options.html" target="_blank">进入设置</a>{" "} 
         </div>
         <div className="font-bold flex flex-row gap-1 items-center text-blue-600 pt-4 pb-2 text-sm cursor-pointer" onClick={createNewRule}>
-          <IoIosCopy /> 一键去除复制限制
+          <IoIosCopy /> 一键去除文本选中限制
         </div>
       </div>
     </div>
