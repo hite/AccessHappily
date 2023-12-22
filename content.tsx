@@ -10,10 +10,10 @@ import "./style.css";
 import { Storage } from "@plasmohq/storage"
 const storage = new Storage()
 const kUniKey = 'KeyOfRuleForDomains';
-
+const kDBKeySettings = 'kDBKeySettings';
 // 生成文本
-import styleText from "data-text:./style.css"
-import type { PlasmoGetStyle } from "plasmo"
+import styleText from "data-text:./style.css";
+import type { PlasmoGetStyle } from "plasmo";
   // injectAnchor 的时候会注入 样式文件
 export const getStyle: PlasmoGetStyle = () => {
   const style = document.createElement("style")
@@ -236,6 +236,7 @@ function Content() {
   console.log(document.readyState);
   const [hidden, setHidden] = useState(false);
   const [tips, setTips] = useState('已自动隐藏登录提示弹窗');
+  const [tipsOn, setTipsOn]  = useState(true);
 
   const [selector, setSelector] = useState(null);
   const [ruleName, setRuleName] = useState('规则名称');
@@ -268,6 +269,18 @@ function Content() {
       setRuleType(RuleActionType.insertCSS);
       setShowPanel(true);
     });
+    //
+  },[]);
+
+  useEffect(()=>{
+    let init =async () => {
+      let on: any = await storage.get(kDBKeySettings);
+      if(!on) {
+        on = {};
+      }
+      setTipsOn(on['tipsOn']);
+    };
+    init();
   },[]);
 
   useEffect(() => {
@@ -291,7 +304,6 @@ function Content() {
       onElementAdded(mutationsList, loadProcess);
     });
     observer.observe(document, { childList: true, subtree: true });
-
   }, []);
 
   let UI = <span />;
@@ -305,7 +317,7 @@ function Content() {
         <span className="text-red-600">数据错误, 没有选中元素</span>
       </div>;
     }
-  } else if (hidden) {
+  } else if (hidden && tipsOn) {
     UI = <Warning message={tips} autoHideCallback={() => {
       setHidden(false);
     }}></Warning>
@@ -326,7 +338,7 @@ function Warning({ message, autoHideCallback }: { message: string, autoHideCallb
     left:0,
     top:0,
     fontSize: 14,
-    padding: 4
+    padding: 1
   }}>
     <span className="text-content2 alert-success">{message}</span>
   </div>

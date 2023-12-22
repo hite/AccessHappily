@@ -11,6 +11,7 @@ import { Storage } from "@plasmohq/storage"
 const storage = new Storage()
 const kUniKey = 'KeyOfRuleForDomains';
 const kRemoteRule = 'kRemoteRuleForDomains';
+const kDBKeySettings = 'kDBKeySettings';
 
 function HelpText({text}:{text: string}) {
   const [show, setShow] = useState(false);
@@ -243,24 +244,18 @@ function PlayGround() {
 export default Tab
 
 function Tab() {
-  const [activeTab, setActiveTab] = useState(1);
-  let content = <IndexPopup></IndexPopup>;
-  if (activeTab == 2) {
-    content = <Suscription></Suscription>;
-  } else if (activeTab == 3) {
-    content = <PlayGround></PlayGround>;
-  }
+  const [activeTab, setActiveTab] = useState(0);
+  let contents = [<IndexPopup/>, <Suscription></Suscription>, <PlayGround></PlayGround>,<Settings></Settings>];
+  let content = contents[activeTab];
+  let tabNames = ['编辑自定义规则','订阅远程规则','测试规则','设置'];
+  let tabs = tabNames.map((o, idx)=>{
+    return <div key={idx} className={activeTab == idx ? "tab tab-bordered px-6 tab-active" : "tab tab-bordered px-6"} onClick={() => {
+      setActiveTab(idx);
+    }}>{o}</div>
+  });
   return (<div className="p-6">
     <div className="tabs gap-1">
-      <div className={activeTab == 1 ? "tab tab-bordered px-6 tab-active" : "tab tab-bordered px-6"} onClick={() => {
-        setActiveTab(1);
-      }}>编辑自定义规则</div>
-      <div className={activeTab == 2 ? "tab tab-bordered px-6 tab-active" : "tab tab-bordered px-6"} onClick={() => {
-        setActiveTab(2);
-      }}>订阅远程规则</div>
-      <div className={activeTab == 3 ? "tab tab-bordered px-6 tab-active" : "tab tab-bordered px-6"} onClick={() => {
-        setActiveTab(3);
-      }}>测试规则</div>
+      {tabs}
     </div>
     {content}
   </div>)
@@ -538,4 +533,49 @@ function TableList({ data, onUpdateData }: { data: Array<RemoteRule>, onUpdateDa
       </div>
     </div>
   </div>
+}
+
+function Settings() {
+  const [tipsOn, setTipsOn] = useState(true);
+
+  useEffect(()=>{
+    let init =async () => {
+      let on: any = await storage.get(kDBKeySettings);
+      if(!on) {
+        on = {};
+      }
+      setTipsOn(on['tipsOn']);
+    };
+    init();
+  })
+
+  return <div className="flex max-w-sm flex-col gap-6 p-4">
+	<div className="flex flex-col ">
+		<h1 className="text-3xl font-semibold">高级设置</h1>
+		<p className="text-sm">在这里修改程序内置参数</p>
+	</div>
+	<div className="form-group">
+		<div className="form-field">
+			<div className="form-control justify-between">
+				<div className="flex gap-2">
+					<input type="checkbox" className="checkbox" id="tipsOn" checked={tipsOn} onChange={async (e)=>{
+            setTipsOn(e.target.checked);
+            try {
+              let on: any = await storage.get(kDBKeySettings);
+              if(!on) {
+                on = {};
+              }
+              on['tipsOn'] = e.target.checked;
+              storage.set(kDBKeySettings, on);
+            } catch (error) {
+              alert(error.message)
+            }
+          }}/>
+					<label htmlFor="tipsOn" className="text-base">是否在规则生效时,右上角显示提示</label>
+				</div>
+			</div>
+		</div>
+
+	</div>
+</div>
 }
