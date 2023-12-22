@@ -108,20 +108,23 @@ function executeRule(obj: IRuleAction, onFinish: (message: string)=> void) {
         elements.forEach((e)=>{
           e.style = 'display:none !important';
         });
-        onFinish('已自动隐藏元素， 规则名 ：' + obj.name)
+        onFinish('已自动隐藏元素， 规则名 ：' + obj.name);
+        markExecuting(obj, false);
       } else if (type == RuleActionType.autoNavigate) {
         let firstOne = elements[0];
         let link = firstOne.value || firstOne.innerText;
         window.setTimeout(() => {
           window.location.assign(link);
           onFinish('已自动跳转到页面 ' + link + '， 规则名 ：' + obj.name);
+          markExecuting(obj, false);
         }, 1000);
       } else {
         window.setTimeout(() => {
           elements.forEach((e)=>{
             e.click();
           });
-          onFinish('已自动点击元素， 规则名 ：' + obj.name)
+          onFinish('已自动点击元素， 规则名 ：' + obj.name);
+          markExecuting(obj, false);
         }, 1000);
       }
       //
@@ -129,6 +132,7 @@ function executeRule(obj: IRuleAction, onFinish: (message: string)=> void) {
       logRule(obj);
     } else {
       console.info('Not found target node for selector: ' + data);
+      markExecuting(obj, false);
     }
 }
 // Listen for messages from the popup.
@@ -142,6 +146,7 @@ chrome.runtime.onMessage.addListener((msg, sender, response) => {
       {
         if(!lastRightClickedElement) {
           console.error('no element right clicked');
+          alert('没有获取到选中的元素,请更换右键位置再次尝试.')
           return;
         }
         eventEmitter.emit(kEventKeyContextMenus);
@@ -273,17 +278,17 @@ function Content() {
       showTips(msg);
     });
 
-    let executeRule = function(){
+    let loadProcess = function(){
       loadProcessHandler((msg)=>{
         showTips(msg);
       });
     };
     // first attempt to hide\click
-    executeRule();
+    loadProcess();
     // 2nd attempt to hide\click
     // add domChanging observer
     let observer = new MutationObserver(function(mutationsList) {
-      onElementAdded(mutationsList, executeRule);
+      onElementAdded(mutationsList, loadProcess);
     });
     observer.observe(document, { childList: true, subtree: true });
 
@@ -315,20 +320,15 @@ function Warning({ message, autoHideCallback }: { message: string, autoHideCallb
     }, 4000);
   }, []);
   return <div style={{
-    backgroundColor: "yellow",
+    backgroundColor: "blue",
     position: "fixed",
-    minWidth:400,
+    minWidth:200,
     left:0,
     top:0,
+    fontSize: 14,
     padding: 4
   }}>
-    <div style={{
-      display: "flex",
-      flexDirection: "column",
-      fontSize: 14
-    }}>
-      <span className="text-content2 alert-success">{message}</span>
-    </div>
+    <span className="text-content2 alert-success">{message}</span>
   </div>
 }
 
@@ -424,7 +424,7 @@ function AddPanel({selector, ruleType, ruleName, onClose}:{selector: string, rul
           <div className="form-field">
             <label className="form-label" htmlFor="message">匹配的选择器 (以及规则）<span className=" text-orange-600">谨慎修改</span></label>
             <input className="input input-solid max-w-full" id="message" placeholder="输入样式规则，可参考下方预览里内容" required onChange={(e) => setData(e.target.value)} value={data} />
-            <button className="btn-sm btn-solid-warning" onClick={highlightTest}>测试选择器</button><span className="form-label-alt">选中元素会边框变色闪烁</span>
+            <button className="btn-sm btn-solid-warning" onClick={highlightTest}>测试选择器</button><span className="form-label-alt">选中元素会边框变色闪烁(部分背景下不明显)</span>
           </div>
           <div className="form-field">
             <label className="form-label">类型</label>

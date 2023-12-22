@@ -21,9 +21,9 @@ export interface IRule {
 
 export const builtinCSSInHost = `
 @keyframes ah_blink {
-  0% { border-color: blue; border-width:1px; }
-  50% { border-color: red; border-width:2px;}
-  100% { border-color: blue; border-width:1px;}
+  0% { border-color: red; border-width:2px;  }
+  50% { border-color: white; border-width:2.2px;}
+  100% { border-color:  black; border-width:2px;}
 }
 
 .ah_highlight_elem {
