@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import eventEmitter, { EventEmitter} from "~EventEmitter";
-import { getRules, getSelector, type IRuleAction } from "~rules";
+import { builtinCSSInHost, getRules, getSelector, isMatched, type IRuleAction } from "~rules";
 
 import { RuleActionType, builtinRule } from "~rules";
 // 这里很关键：引入基础样式，否则按钮没有背景色（rippleUI）
@@ -67,7 +67,70 @@ function sendToPop(_data) {
   // send message to popup
   chrome.runtime.sendMessage(_data);
 }
+////
+let kExecutingTasks = {}
+function isExecuting(rule: IRuleAction): boolean {
+  let key = 'k'+rule.name + rule.type + rule.data;
+  return kExecutingTasks[key];
+}
+function markExecuting(rule: IRuleAction, ongoing: boolean) {
+  let key = 'k'+rule.name + rule.type + rule.data;
+  kExecutingTasks[key] = ongoing;
+}
+/////
 
+function executeRule(obj: IRuleAction, onFinish: (message: string)=> void) {
+    let type = obj.type, data = obj.data;
+    if(isExecuting(obj)) {
+      console.info('the same rule is executing', obj.name);
+      return;
+    }
+    markExecuting(obj, true);
+
+    let elements: any[] = [];
+    if (data.startsWith(':contains(')) {
+      // :contains('继续前往')
+      let rawContent = data.replace(':contains(', '');
+      let targetContent = rawContent.substring(1, rawContent.length - 2);
+      let textNode = nativeTreeWalker(targetContent);
+
+      if (textNode) {
+        elements = [textNode.parentNode];
+      }
+    } else {
+      document.querySelectorAll(data).forEach((element)=>{
+        elements.push(element);
+      });
+    }
+
+    if (elements.length > 0) {
+      if (type ==  RuleActionType.autoHide) {
+        elements.forEach((e)=>{
+          e.style = 'display:none !important';
+        });
+        onFinish('已自动隐藏元素， 规则名 ：' + obj.name)
+      } else if (type == RuleActionType.autoNavigate) {
+        let firstOne = elements[0];
+        let link = firstOne.value || firstOne.innerText;
+        window.setTimeout(() => {
+          window.location.assign(link);
+          onFinish('已自动跳转到页面 ' + link + '， 规则名 ：' + obj.name);
+        }, 1000);
+      } else {
+        window.setTimeout(() => {
+          elements.forEach((e)=>{
+            e.click();
+          });
+          onFinish('已自动点击元素， 规则名 ：' + obj.name)
+        }, 1000);
+      }
+      //
+      sendToPop(obj);
+      logRule(obj);
+    } else {
+      console.info('Not found target node for selector: ' + data);
+    }
+}
 // Listen for messages from the popup.
 const kEnableCopyCssText = '*{user-select: text !important;-webkit-user-select: text !important;-webkit-touch-callout: text !important;}';
 
@@ -130,12 +193,11 @@ let insertCSSHandler = async (onActionDone: (message: string)=> void) => {
   }
 };
 
-let loadProcessHandler = async (onActionDone: (message: string)=> void) => {
+let loadProcessHandler = async (onFinish: (message: string)=> void) => {
   console.log('loadProcessHandler');
   const ruleList = await getRules(window.location.href);
   for (let idx2 = 0; idx2 < ruleList.length; idx2++) {
     const obj: any = ruleList[idx2];
-    
     let type = obj.type, data = obj.data;
     if(type == RuleActionType.insertCSS) {
       continue;
@@ -144,49 +206,7 @@ let loadProcessHandler = async (onActionDone: (message: string)=> void) => {
       logRule(obj);
       continue;
     }
-
-    let element = null;
-    if (data.startsWith(':contains(')) {
-      // :contains('继续前往')
-      let rawContent = data.replace(':contains(', '');
-      let targetContent = rawContent.substring(1, rawContent.length - 2);
-      let textNode = nativeTreeWalker(targetContent);
-
-      if (textNode) {
-        element = textNode.parentNode;
-      }
-    } else {
-      element = document.querySelector(data);
-    }
-
-    if (element && !element.ac_processing) {
-      element.ac_processing = true;
-      if (type ==  RuleActionType.autoHide) {
-        element.style = 'display:none !important';
-        onActionDone('已自动隐藏登录提示弹窗， 规则名 ：' + obj.name)
-        element.ac_processing = false;
-      } else if (type == RuleActionType.autoNavigate) {
-        let link = element.value || element.innerText;
-        onActionDone('已自动跳转到页面 ' + link + '， 规则名 ：' + obj.name);
-        window.setTimeout(() => {
-          window.location.assign(link);
-          element.ac_processing = false;
-        }, 1000);
-      } else {
-        onActionDone('已自动点击元素， 规则名 ：' + obj.name)
-        window.setTimeout(() => {
-          element.click();
-          element.ac_processing = false;
-        }, 1000);
-      }
-      //
-      sendToPop(obj);
-      logRule(obj);
-    } else if (element && element.ac_processing) {
-      console.info('the element is processing: ', element);
-    } else {
-      console.info('Not found target node for selector: ' + data);
-    }
+    executeRule(obj, onFinish)
   }
   //
   listenContextMenuShow();
@@ -224,6 +244,8 @@ function Content() {
 
   useEffect(()=>{
     eventEmitter.add(kEventKeyContextMenus, ()=>{
+      setShowPanel(false);
+
       var selector = getSelector(lastRightClickedElement);
       if(selector) {
         setSelector(selector);
@@ -234,6 +256,8 @@ function Content() {
       setShowPanel(true);
     });
     eventEmitter.add(kEventKeyEnableCopy, ()=>{
+      setShowPanel(false);
+
       setRuleName('去掉不可复制的限制');
       setSelector(kEnableCopyCssText);
       setRuleType(RuleActionType.insertCSS);
@@ -242,6 +266,8 @@ function Content() {
   },[]);
 
   useEffect(() => {
+    // 植入内置的样式, 如按钮闪烁
+    setStyle(builtinCSSInHost, 'builtinCSS');
     // 尽早的植入
     insertCSSHandler((msg)=>{
       showTips(msg);
@@ -289,7 +315,7 @@ function Warning({ message, autoHideCallback }: { message: string, autoHideCallb
     }, 4000);
   }, []);
   return <div style={{
-    backgroundColor: "red",
+    backgroundColor: "yellow",
     position: "fixed",
     minWidth:400,
     left:0,
@@ -311,7 +337,7 @@ function AddPanel({selector, ruleType, ruleName, onClose}:{selector: string, rul
   const [data, setData] = useState(selector);
 
   const location = document.location;
-  let urlPrefix = location.host + location.pathname + '/*';
+  let urlPrefix = location.host + location.pathname + '*';
 
   const [domain, setDomain] = useState(urlPrefix)
   const [type, setType] = useState(ruleType)
@@ -341,7 +367,7 @@ function AddPanel({selector, ruleType, ruleName, onClose}:{selector: string, rul
   useEffect(()=>{
     let root = document.querySelector('html');
     let orig = window.getComputedStyle(root).getPropertyValue('font-size');
-    if(orig != '16px') {
+    if(orig != '16px' && orig != '62.5%') {
       root.style['font-size'] =  '16px';
     }
     return ()=>{
@@ -351,26 +377,54 @@ function AddPanel({selector, ruleType, ruleName, onClose}:{selector: string, rul
     }
   },[]);
 
-  return <div className="cl-s bg-backgroundPrimary w-96 p-4 fixed">
+  const highlightTest = (e: FormEvent)=>{
+    let ele = document.querySelector(data);
+    if(!ele) {
+      alert('没有找到该元素');
+    } else {
+      ele.className = ele.className + ' ah_highlight_elem';
+    }
+    window.setTimeout(()=>{
+      ele.className = ele.className.replace(' ah_highlight_elem', '');
+    },1000);
+    e.preventDefault();
+    return false;
+  };
+  const testRule = (e: FormEvent)=>{
+    if(isMatched(domain, location.href)) {
+      let rule: IRuleAction = {
+        type: type,
+        data: data,
+        name: name,
+        _domain: domain,
+      }
+      executeRule(rule, ()=>{});
+    } else {
+      alert('网页地址规则不匹配当前页面');
+    }
+
+    e.preventDefault();
+    return false;
+  };
+
+  return <div className="cl-s bg-backgroundPrimary w-96 p-4 fixed ring-2 ring-offset-2 ring-blue-500">
       <div className="mx-auto flex w-full max-w-sm flex-col gap-6">
         <div className="flex flex-col gap-1">
           <h1 className="text-3xl font-semibold">手动添加规则 （beta）</h1>
-          <p className="text-xs text-yellow-600">以下生成规则大部分情况下不需要修改，除非你懂 HTML</p>
+          <p className="text-xs text-yellow-600">以下生成规则大部分情况下不需要修改，除非你懂 HTML/CSS</p>
         </div>
         <form className="form-group" onSubmit={saveRule}>
           <div className="form-field">
-            <label className="form-label">网页地址规则</label>
-            <input className="input input-solid " placeholder="输入网页地址规则" type="text" id="name" required onChange={(e) => setDomain(e.target.value)} value={domain} />
+            <label className="form-label">网页地址规则 <span className="text-sm form-label-alt text-indigo-600">小心修改</span></label>
+            <input className="input input-solid max-w-full" placeholder="输入网页地址规则" type="text" id="name" required onChange={(e) => setDomain(e.target.value)} value={domain} />
             <label className="form-label">
-              <span className="text-sm form-label-alt text-indigo-600">小心修改，  如，example.com/path* , *.example.com/path, file.exmaple.com</span>
+              <span className=" form-label-alt">如，example.com/path* , *.example.com/path, file.exmaple.com</span>
             </label>
           </div>
           <div className="form-field">
-            <label className="form-label" htmlFor="message">匹配的选择器 (以及规则）</label>
+            <label className="form-label" htmlFor="message">匹配的选择器 (以及规则）<span className=" text-orange-600">谨慎修改</span></label>
             <input className="input input-solid max-w-full" id="message" placeholder="输入样式规则，可参考下方预览里内容" required onChange={(e) => setData(e.target.value)} value={data} />
-            <label className="form-label">
-              <span className="form-label-alt text-orange-600">谨慎修改</span>
-            </label>
+            <button className="btn-sm btn-solid-warning" onClick={highlightTest}>测试选择器</button><span className="form-label-alt">选中元素会边框变色闪烁</span>
           </div>
           <div className="form-field">
             <label className="form-label">类型</label>
@@ -382,16 +436,17 @@ function AddPanel({selector, ruleType, ruleName, onClose}:{selector: string, rul
                 <option value={RuleActionType.insertCSS}>注入样式</option>
               </select>
             </div>
+            <button className="btn-sm btn-solid-warning" onClick={testRule}>测试规则是否生效</button>
           </div>
           <div className="form-field">
-            <label className="form-label">规则名称</label>
-            <input className="input input-solid" id="name" placeholder="输入对样式规则对描述，便于区别" required onChange={(e) => setName(e.target.value)} value={name} />
+            <label className="form-label">规则名称 <span className="text-green-700">建议修改</span></label>
+            <input className="input input-solid max-w-full" id="name" placeholder="输入对样式规则对描述，便于区别" required onChange={(e) => setName(e.target.value)} value={name} />
             <label className="form-label">
-              <span className="form-label-alt text-green-700">建议修改，设置为容易记忆的名称</span>
+              <span className="form-label-alt">设置为容易记忆的名称</span>
             </label>
           </div>
           <div className="form-field">
-            <div className="form-control justify-between">
+            <div className="form-control justify-between items-center">
               <button type="submit" className="rounded-lg btn btn-primary">保存</button>
               <button className="btn" onClick={()=>{
                 onClose();

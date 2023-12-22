@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { RuleActionType, builtinRule } from "~rules";
-
+import { FaExternalLinkAlt } from "react-icons/fa";
 import { FaQuestionCircle } from "react-icons/fa";
 import "./style.css";
 
@@ -77,6 +77,20 @@ function IndexPopup() {
     };
     init();
   }, []);
+
+  const copyRule = ()=>{
+    let v = JSON.stringify(editorContent);
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(v);
+    } else {
+        const input = document.createElement('input');
+        document.body.appendChild(input);
+        input.setAttribute('value', v);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+    }
+  };
 
   return (<section className="bg-gray-2 rounded-xl">
     <div className="p-8 shadow-lg">
@@ -176,6 +190,9 @@ function IndexPopup() {
           <button className="btn btn-ghost underline" onClick={()=>{
             setEditorContent(builtinRule);
           }}>载入样例规则</button>
+          <div className="flex flex-row items-center gap-2 underline text-blue-600 text-sm">
+            <a href="https://github.com/hite/AccessHappily/issues/1" onClick={copyRule} target="_blank">复制规则并分享自己的规则</a>{" "} <FaExternalLinkAlt />
+          </div>
         </div>
       </div>
     </div>
@@ -205,15 +222,14 @@ function PlayGround() {
 
   return <div className="form-group p-4">
     <div className="form-field">
-      <label className="form-label">规则</label>
-      <input placeholder="输入地址规则" type="text" className="input max-w-full" value={rule} onChange={(e) => {
+      <label className="form-label">网页地址规则</label>
+      <input placeholder="输入匹配网页地址规则" type="text" className="input max-w-full" value={rule} onChange={(e) => {
         setRule(e.target.value);
         setCheckState('');
       }} />
     </div>
     <div className="form-field">
       <label className="form-label">目标地址</label>
-
       <input placeholder="目标地址，包含 https:// 前缀" type="text" className="input max-w-full" value={url} onChange={(e) => { setUrl(e.target.value); setCheckState(''); }} />
       {validation}
     </div>
@@ -301,6 +317,45 @@ function saveToDB(newData: any) {
 
 async function loadRemoteUrl(url: string) {
   const myHeaders = new Headers({
+    "Content-Type": "text/plain",
+  });
+
+  const myRequest = new Request(url, {
+    method: "GET",
+    headers: myHeaders,
+    mode: "cors",
+    cache: "default",
+  });
+  // let result = await resp.json();
+  let content = null;
+  try {
+    let resp = await fetch(myRequest);
+    let htmlString = await resp.text();
+    // 解析出目标内容
+    // 以第一个为准
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlString, "text/html");
+    let element = doc.querySelector('.highlight-source-json[data-snippet-clipboard-copy-content]');
+    if(element) {
+      let attributeValue = element.getAttribute('data-snippet-clipboard-copy-content');
+      console.log(attributeValue);
+      if(attributeValue) {
+        content = JSON.parse(attributeValue)
+      }
+    }
+  } catch (error) {
+    alert('获取远端内容失败,' + error.message);
+  }
+  // 检查是否符合 schema
+  if(content.name && content.type && content.matches && content.data) {
+    return content;
+  }
+  alert('数据格式不规范,')
+  return null;
+}
+
+async function loadRawJSON(url: string) {
+  const myHeaders = new Headers({
     "Content-Type": "text/json",
   });
 
@@ -317,16 +372,15 @@ async function loadRemoteUrl(url: string) {
     let resp = await fetch(myRequest);
     let text = await resp.text();
     console.log(text);
-
   } catch (error) {
-    alert('远端内容不是合法的 JSON 对象');
+    alert('获取远端内容失败,' + error.message);
   }
 
   if (text) {
     try {
       content = JSON.parse(text);
     } catch (error) {
-      alert('远端内容不是合法的 JSON 对象')
+      alert('解析出错,' + error.message)
     }
   }
   return content;
@@ -341,15 +395,20 @@ function AddSub({ onDataAdded }: { onDataAdded: (val: RemoteRule) => void }) {
   return <div className="flex w-full max-w-sm flex-col gap-6">
     <div className="form-group">
       <div className="form-field">
+        <div className="flex flex-row items-center gap-2 underline text-blue-600 text-sm">
+          <a href="https://github.com/hite/AccessHappily/issues" target="_blank">前往主页查找在线规则</a>{" "} <FaExternalLinkAlt />
+        </div>
+      </div>
+      <div className="form-field">
         <label className="form-label">规则地址</label>
 
-        <input required placeholder="输入 URL，确保内容是合法的 JSON" type="url" className="input max-w-full" value={url} onChange={(e) => setUrl(e.target.value)} />
-        <label className="form-label" style={{ display: showError }}>
-          <span className="form-label-alt">Please enter a valid url.</span>
+        <input required placeholder="输入 issue 的 url" type="url" className="input max-w-full" value={url} onChange={(e) => setUrl(e.target.value)} />
+        <label className="form-label text-gray-600">
+          <span className="form-label-alt">{!showError ? 'Please enter a valid url.' :'形如, https://github.com/hite/AccessHappily/issues/1' }</span>
         </label>
       </div>
       <div className="form-field">
-        <label className="form-label">规则描述</label>
+        <label className="form-label">规则描述(可选)</label>
 
         <input required placeholder="为规则起个名字，方便后面管理" type="text" className="input " value={name} onChange={(e) => setName(e.target.value)} />
       </div>
@@ -357,23 +416,25 @@ function AddSub({ onDataAdded }: { onDataAdded: (val: RemoteRule) => void }) {
         <div className="spinner-dot-intermittent"></div><span className="text-blue-500">获取远端内容...</span>
       </div>
       <div className="form-field pt-5">
-        <div className="form-control justify-between">
+        <div className="form-control flex flex-row gap-4">
           <button type="button" className="btn btn-primary" onClick={async () => {
             setShowLoading('block');
-            let content = await loadRemoteUrl(url);
+            let resp = await loadRemoteUrl(url);
+            //
             setShowLoading('none');
 
-            if (content) {
+            if (resp) {
               onDataAdded({
                 name: name,
                 url: url,
-                content: content,
+                content: resp.data,
                 enabled: true
               })
             } else {
               throw new Error('内容错误');
             }
           }}>添加</button>
+
         </div>
       </div>
     </div>
@@ -386,8 +447,8 @@ function TableList({ data, onUpdateData }: { data: Array<RemoteRule>, onUpdateDa
   const [showLoading, setShowLoading] = useState('none');
 
   
-  let trs = [<tr>
-    <th className="p-2" colSpan={4}>无可用的订阅地址</th>
+  let trs = [<tr key={1}>
+    <th className="p-2" colSpan={5}>无可用的订阅地址</th>
   </tr>]
   if (data.length > 0) {
     trs = data.map((item, idx) => {
@@ -435,11 +496,11 @@ function TableList({ data, onUpdateData }: { data: Array<RemoteRule>, onUpdateDa
         <label htmlFor="modal-1" className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</label>
         <h2 className="text-xl">查看规则内容</h2>
         <span>{url}</span>
-        <button className="btn" onClick={async () => {
+        <button className="btn" style={{lineHeight: 38}}onClick={async () => {
           setShowLoading('block');
           let result = await loadRemoteUrl(url);
           setShowLoading('none');
-          setContent(result);
+          setContent(result.data);
 
         }}>从远端更新</button>
         <div style={{ display: showLoading }}>

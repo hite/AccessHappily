@@ -18,6 +18,20 @@ export interface IRuleAction {
 export interface IRule {
   [key: string]: Array<IRuleAction>
 }
+
+export const builtinCSSInHost = `
+@keyframes ah_blink {
+  0% { border-color: blue; border-width:1px; }
+  50% { border-color: red; border-width:2px;}
+  100% { border-color: blue; border-width:1px;}
+}
+
+.ah_highlight_elem {
+  animation: ah_blink 1s linear;
+}
+`
+
+
 export const builtinRule: IRule = {
   "*.zhihu.com": [
     {
@@ -88,11 +102,11 @@ export async function disableRules(rule: IRuleAction) {
   if(domain) {
     if(rule.disabled) {
       disabled[domain] =  rule;
-      await storage.set(kDisabledRule, disabled);
     } else {
       let succ = delete disabled[domain];
       console.log('Remove rule from list, succ = ' + succ);
     }
+    await storage.set(kDisabledRule, disabled);
   } else {
     console.error('legacy data', rule);
   }
