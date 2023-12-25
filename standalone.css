@@ -685,12 +685,12 @@ video {
     font-size: 0.75rem/* 16px */;
     height: 2.0rem;/* 40px */
     line-height: 1.5rem/* 24px */;
-    max-width: 20rem/* 320px */;
+    /* max-width: 20rem; 320px */
     outline: 2px solid transparent;
     outline-offset: 2px;
     padding-left: .75rem/* 12px */;
     padding-right: .75rem/* 12px */;
-    width: 100%;
+    /* width: 100%; */
 }
 .input::-moz-placeholder {
     --ah-text-opacity: 1;
