@@ -4,7 +4,7 @@ import { builtinCSSInHost, getRules, getSelector, isMatched, type IRuleAction } 
 
 import { RuleActionType, builtinRule } from "~rules";
 // 这里很关键：引入基础样式，否则按钮没有背景色（rippleUI）
-import "./style.css";
+import "./standalone.css";
 
 
 import { Storage } from "@plasmohq/storage"
@@ -12,12 +12,14 @@ const storage = new Storage()
 const kUniKey = 'KeyOfRuleForDomains';
 const kDBKeySettings = 'kDBKeySettings';
 // 生成文本
-import styleText from "data-text:./style.css";
+import styleText from "data-text:./standalone.css";
 import type { PlasmoGetStyle } from "plasmo";
   // injectAnchor 的时候会注入 样式文件
 export const getStyle: PlasmoGetStyle = () => {
-  const style = document.createElement("style")
-  style.textContent = styleText
+  const style = document.createElement("style");
+  // https://github.com/PlasmoHQ/plasmo/issues/835
+  style.textContent = styleText;
+  console.log(styleText);
   return style
 }
 
@@ -57,7 +59,6 @@ function nativeTreeWalker(targetContent) {
     let value = node.nodeValue.trim();
     if (value == targetContent) {
       return node;
-      break;
     }
   }
   return null;
@@ -332,7 +333,7 @@ function Warning({ message, autoHideCallback }: { message: string, autoHideCallb
     }, 4000);
   }, []);
   return <div style={{
-    backgroundColor: "blue",
+    backgroundColor: "red",
     position: "fixed",
     minWidth:200,
     left:0,
@@ -376,18 +377,18 @@ function AddPanel({selector, ruleType, ruleName, onClose}:{selector: string, rul
   }
 
   // 确保弹窗的 root fontSize 不受影响
-  useEffect(()=>{
-    let root = document.querySelector('html');
-    let orig = window.getComputedStyle(root).getPropertyValue('font-size');
-    if(orig != '16px' && orig != '62.5%') {
-      root.style['font-size'] =  '16px';
-    }
-    return ()=>{
-      if(orig != '16px') {
-        root.style['font-size'] =  orig;
-      }
-    }
-  },[]);
+  // useEffect(()=>{
+  //   let root = document.querySelector('html');
+  //   let orig = window.getComputedStyle(root).getPropertyValue('font-size');
+  //   if(orig != '16px' && orig != '62.5%') {
+  //     root.style['font-size'] =  '16px';
+  //   }
+  //   return ()=>{
+  //     if(orig != '16px') {
+  //       root.style['font-size'] =  orig;
+  //     }
+  //   }
+  // },[]);
 
   const highlightTest = (e: FormEvent)=>{
     let ele = document.querySelector(data);
@@ -419,10 +420,10 @@ function AddPanel({selector, ruleType, ruleName, onClose}:{selector: string, rul
     return false;
   };
 
-  return <div className="cl-s bg-backgroundPrimary w-96 p-4 fixed ring-2 ring-offset-2 ring-blue-500">
+  return <div className="cl-s rounded-sm bg-backgroundPrimary w-96 p-4 fixed ring-2 ring-offset-2 ring-blue-500">
       <div className="mx-auto flex w-full max-w-sm flex-col gap-6">
         <div className="flex flex-col gap-1">
-          <h1 className="text-3xl font-semibold">手动添加规则 （beta）</h1>
+          <h1 className="text-3xl font-semibold text-primary">手动添加规则 （beta）</h1>
           <p className="text-xs text-yellow-600">以下生成规则大部分情况下不需要修改，除非你懂 HTML/CSS</p>
         </div>
         <form className="form-group" onSubmit={saveRule}>
@@ -441,7 +442,7 @@ function AddPanel({selector, ruleType, ruleName, onClose}:{selector: string, rul
           <div className="form-field">
             <label className="form-label">类型</label>
             <div className="form-control">
-              <select className="select" defaultValue={type} onChange={(e) => setType(e.target.value as RuleActionType)}>
+              <select className="select max-w-full" defaultValue={type} onChange={(e) => setType(e.target.value as RuleActionType)}>
                 <option value={RuleActionType.autoHide}>自动隐藏元素</option>
                 <option value={RuleActionType.autoClick}>自动点击元素</option>
                 <option value={RuleActionType.autoNavigate}>自动跳转元素</option>

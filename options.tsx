@@ -192,7 +192,7 @@ function IndexPopup() {
             setEditorContent(builtinRule);
           }}>载入样例规则</button>
           <div className="flex flex-row items-center gap-2 underline text-blue-600 text-sm">
-            <a href="https://github.com/hite/AccessHappily/issues/1" onClick={copyRule} target="_blank">复制规则并分享自己的规则</a>{" "} <FaExternalLinkAlt />
+            <a href="https://github.com/hite/AccessHappily/issues/1" onClick={copyRule} target="_blank">复制并发布自己的规则</a>{" "} <FaExternalLinkAlt />
           </div>
         </div>
       </div>
@@ -571,7 +571,7 @@ function Settings() {
               alert(error.message)
             }
           }}/>
-					<label htmlFor="tipsOn" className="text-base">是否在规则生效时,右上角显示提示</label>
+					<label htmlFor="tipsOn" className="text-base">规则生效时,右上角显示提示</label>
 				</div>
 			</div>
 		</div>
