@@ -1,4 +1,5 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
+import { createContext, useContext } from 'react';
 import { RuleActionType, builtinRule } from "~rules";
 import { FaExternalLinkAlt } from "react-icons/fa";
 import { FaQuestionCircle } from "react-icons/fa";
@@ -8,14 +9,18 @@ import { FiSettings } from "react-icons/fi";
 import { GrDocumentTest } from "react-icons/gr";
 import "./style.css";
 
-import { isMatched } from "~rules";
 import VanillaJSONEditor from "./VanillaJSONEditor";
+import Settings from "~Settings";
 
 import { Storage } from "@plasmohq/storage"
+import Suscription from "~Subscription";
+import PlayGround from "~PlayGround";
+
+import { type AlertState, AlertContext } from "~Context";
+
+
 const storage = new Storage()
 const kUniKey = 'KeyOfRuleForDomains';
-const kRemoteRule = 'kRemoteRuleForDomains';
-const kDBKeySettings = 'kDBKeySettings';
 
 function HelpText({text}:{text: string}) {
   const [show, setShow] = useState(false);
@@ -203,66 +208,22 @@ function IndexPopup() {
   </section>)
 }
 
-function PlayGround() {
-  const [rule, setRule] = useState('');
-  const [url, setUrl] = useState('');
 
-  const [checkState, setCheckState] = useState('');
-  const validate = () => {
-    setCheckState(isMatched(rule, url) ? 'succ' : 'failed')
-  };
 
-  let validation = <label className="form-label">
-    <span className="form-label-alt">未测试</span></label>;
-  if (checkState.length > 0) {
-    validation = checkState == 'succ' ? <label className="form-label">
-      <span className="form-label-alt text-success">匹配</span></label> :
-      <label className="form-label">
-        <span className="form-label-alt text-error">不匹配</span>
-      </label>;
-  }
+export default Options;
 
-  return <div className="form-group bg-gray-2 rounded-x p-8 shadow-lg w-2/3">
-    <div className="form-field">
-      <label className="form-label">网页地址规则</label>
-      <input placeholder="输入匹配网页地址规则" type="text" className="input max-w-full" value={rule} onChange={(e) => {
-        setRule(e.target.value);
-        setCheckState('');
-      }} />
-    </div>
-    <div className="form-field">
-      <label className="form-label">目标地址</label>
-      <input placeholder="目标地址，包含 https:// 前缀" type="text" className="input max-w-full" value={url} onChange={(e) => { setUrl(e.target.value); setCheckState(''); }} />
-      {validation}
-    </div>
 
-    <div className="form-field">
-      <button type="button" className="btn gap-2 bg-gray-5 w-24" onClick={validate}>测试</button>
-    </div>
-  </div>
-}
-
-export default SideBarContent
-
-function Tab() {
-  const [activeTab, setActiveTab] = useState(0);
-  let contents = [<IndexPopup/>, <Suscription></Suscription>, <PlayGround></PlayGround>,<Settings></Settings>];
-  let content = contents[activeTab];
-  let tabNames = ['编辑自定义规则','订阅远程规则','测试规则','设置'];
-  let tabs = tabNames.map((o, idx)=>{
-    return <div key={idx} className={activeTab == idx ? "tab tab-bordered px-6 tab-active" : "tab tab-bordered px-6"} onClick={() => {
-      setActiveTab(idx);
-    }}>{o}</div>
-  });
-  return (<div className="p-6">
-    <div className="tabs gap-1">
-      {tabs}
-    </div>
-    {content}
-  </div>)
+function Options() {
+  let [alert, showAlert] = useState<AlertState>(null);
+  return (
+    <AlertContext.Provider value={[alert, showAlert]}>
+      <SideBarContent />
+    </AlertContext.Provider>
+  );
 }
 
 function SideBarContent() {
+  const [alert, showAlert] = useContext(AlertContext);
   const [activeTab, setActiveTab] = useState(0);
   let icons = [<MdOutlineDashboardCustomize/>, <FaSlideshare></FaSlideshare>,<GrDocumentTest></GrDocumentTest>, <FiSettings></FiSettings>];
   let contents = [<IndexPopup/>, <Suscription></Suscription>, <PlayGround></PlayGround>,<Settings></Settings>];
@@ -277,6 +238,28 @@ function SideBarContent() {
       <span>{o}</span>
     </li>
   })
+
+  let alertInfo = null;
+  if(alert) {
+    alertInfo = <div className="fixed w-full z-[100]">
+    <div className={`alert alert-${alert.type} w-1/3 mx-auto`}>
+      <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path fillRule="evenodd" clipRule="evenodd" d="M24 4C12.96 4 4 12.96 4 24C4 35.04 12.96 44 24 44C35.04 44 44 35.04 44 24C44 12.96 35.04 4 24 4ZM24 34C22.9 34 22 33.1 22 32V24C22 22.9 22.9 22 24 22C25.1 22 26 22.9 26 24V32C26 33.1 25.1 34 24 34ZM26 18H22V14H26V18Z" fill="#0085FF" />
+      </svg>
+      <div className="flex flex-col">
+        <span className="text-lg">{alert.title || '提示'}</span>
+        <span className="text-content2">{alert.message}</span>
+      </div>
+    </div>
+  </div>
+  }
+  useEffect(()=>{
+    if(alert) {
+      window.setTimeout(()=>{
+        showAlert(null);
+      }, 2000);
+    }
+  },[alert])
 
   let logo = require('~/assets/icon.png');
   return <div className="sticky flex flex-row overflow-y-auto rounded-lg shadow-lg sm:overflow-x-hidden">
@@ -304,405 +287,6 @@ function SideBarContent() {
     <div className="flex w-full flex-row flex-wrap gap-4 m-4">
       {content}
     </div>
+    {alertInfo}
   </div>;
-}
-// 订阅部分
-interface RemoteRule {
-  name: string,
-  url: string,
-  content: string,
-  enabled: boolean
-}
-function Suscription() {
-  let initialData: RemoteRule[] = [];
-  const [data, setData] = useState(initialData);
-
-  useEffect(() => {
-    storage.get(kRemoteRule).then((val) => {
-      let list: any = val ? val : [];
-      setData(list);
-    });
-  }, []);
-
-  return <div className="flex flex-col gap-8 bg-gray-2 rounded-x p-8 shadow-lg">
-    <AddSub onDataAdded={(added) => {
-      let newData = [...data, added];
-      setData(newData);
-
-      saveToDB(newData);
-    }}></AddSub>
-    <div className="flex flex-row">
-      <TableList data={data} onUpdateData={(updated) => {
-        let newData = data.map((o) => {
-          if (updated.url === o.url) {
-            return updated;
-          } else {
-            return o;
-          }
-        });
-        setData(newData);
-        saveToDB(newData);
-      }}></TableList>
-    </div>
-  </div>
-}
-
-function saveToDB(newData: any) {
-  try {
-    storage.set(kRemoteRule, newData);
-    alert('保存成功')
-  } catch (error) {
-    alert('保存出错')
-  }
-}
-
-async function loadRemoteUrl(url: string) {
-  const myHeaders = new Headers({
-    "Content-Type": "text/plain",
-  });
-
-  const myRequest = new Request(url, {
-    method: "GET",
-    headers: myHeaders,
-    mode: "cors",
-    cache: "default",
-  });
-  // let result = await resp.json();
-  let content = null;
-  try {
-    let resp = await fetch(myRequest);
-    let htmlString = await resp.text();
-    // 解析出目标内容
-    // 以第一个为准
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(htmlString, "text/html");
-    let element = doc.querySelector('.highlight-source-json[data-snippet-clipboard-copy-content]');
-    if(element) {
-      let attributeValue = element.getAttribute('data-snippet-clipboard-copy-content');
-      console.log(attributeValue);
-      if(attributeValue) {
-        content = JSON.parse(attributeValue)
-      }
-    }
-  } catch (error) {
-    alert('获取远端内容失败,' + error.message);
-  }
-  // 检查是否符合 schema
-  if(content.name && content.type && content.matches && content.data) {
-    return content;
-  }
-  alert('数据格式不规范,')
-  return null;
-}
-
-async function loadRawJSON(url: string) {
-  const myHeaders = new Headers({
-    "Content-Type": "text/json",
-  });
-
-  const myRequest = new Request(url, {
-    method: "GET",
-    headers: myHeaders,
-    mode: "cors",
-    cache: "default",
-  });
-  // let result = await resp.json();
-  let content = null;
-  let text = null;
-  try {
-    let resp = await fetch(myRequest);
-    let text = await resp.text();
-    console.log(text);
-  } catch (error) {
-    alert('获取远端内容失败,' + error.message);
-  }
-
-  if (text) {
-    try {
-      content = JSON.parse(text);
-    } catch (error) {
-      alert('解析出错,' + error.message)
-    }
-  }
-  return content;
-}
-
-function AddSub({ onDataAdded }: { onDataAdded: (val: RemoteRule) => void }) {
-  const [showError, setShowError] = useState('none');
-  const [url, setUrl] = useState('');
-  const [name, setName] = useState('');
-  const [showLoading, setShowLoading] = useState('none');
-
-  return <div className="flex w-full flex-col gap-6 relative">
-    <div className="absolute right-0 top-0">
-      <div className="flex flex-row items-center gap-2 underline text-blue-600 text-sm">
-        <a href="https://github.com/hite/AccessHappily/issues" target="_blank">前往主页查找远程规则</a>{" "} <FaExternalLinkAlt />
-      </div>
-    </div>
-    <div className="form-group">
-      <div className="form-field">
-        <label className="form-label">远程规则地址</label>
-        <input required placeholder="输入远程规则 url" type="url" className="input max-w-full" value={url} onChange={(e) => setUrl(e.target.value)} />
-        <label className="form-label text-gray-600">
-          <span className="form-label-alt">{!showError ? 'Please enter a valid url.' :'形如, https://github.com/hite/AccessHappily/issues/1' }</span>
-        </label>
-      </div>
-      <div className="form-field">
-        <label className="form-label">规则描述(可选)</label>
-
-        <input required placeholder="为规则起个名字，方便后面管理" type="text" className="input " value={name} onChange={(e) => setName(e.target.value)} />
-      </div>
-      <div style={{ display: showLoading }}>
-        <div className="spinner-dot-intermittent"></div><span className="text-blue-500">获取远端内容...</span>
-      </div>
-      <div className="form-field pt-5">
-        <div className="form-control flex flex-row gap-4">
-          <button type="button" className="btn btn-primary" onClick={async () => {
-            setShowLoading('block');
-            let resp = await loadRemoteUrl(url);
-            //
-            setShowLoading('none');
-
-            if (resp) {
-              onDataAdded({
-                name: name,
-                url: url,
-                content: resp.data,
-                enabled: true
-              })
-            } else {
-              throw new Error('内容错误');
-            }
-          }}>添加</button>
-
-        </div>
-      </div>
-    </div>
-  </div>
-}
-
-function TableList({ data, onUpdateData }: { data: Array<RemoteRule>, onUpdateData: (updated: RemoteRule) => void }) {
-  const [url, setCurrentUrl] = useState('');
-  const [content, setContent] = useState('');
-  const [showLoading, setShowLoading] = useState('none');
-
-  
-  let trs = [<tr key={1}>
-    <th className="p-2" colSpan={5}>无可用的订阅地址</th>
-  </tr>]
-  if (data.length > 0) {
-    trs = data.map((item, idx) => {
-      return <tr key={idx}>
-        <th>{idx + 1}</th>
-        <td>{item.name}</td>
-        <td>{item.url}</td>
-        <td><input type="checkbox" className="checkbox-primary checkbox" checked={item.enabled} onChange={(e) => {
-          item.enabled = e.target.checked;
-          // 以 url 为 key
-          onUpdateData(item)
-        }} /></td>
-        <td><label className="btn btn-primary" onClick={() => {
-          setCurrentUrl(item.url);
-          setContent(item.content);
-          let stateinput = document.getElementById('modal-1');
-          stateinput.click();
-        }}>查看规则</label></td>
-      </tr>
-    });
-  }
-
-  return <div className="flex w-full overflow-x-auto">
-    <table className="table-zebra table">
-      <thead>
-        <tr>
-          <th>顺序</th>
-          <th>描述</th>
-          <th>地址</th>
-          <th>是否启用</th>
-          <th>操作</th>
-        </tr>
-      </thead>
-      <tbody>
-        {trs}
-      </tbody>
-    </table>
-
-    <input className="modal-state" id="modal-1" type="checkbox" />
-    <div className="modal">
-      <label className="modal-overlay" htmlFor="modal-1"></label>
-      <div className="modal-content flex flex-col gap-4" style={{
-        maxWidth: 'max-content'
-      }}>
-        <label htmlFor="modal-1" className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</label>
-        <h2 className="text-xl">查看规则内容</h2>
-        <span>{url}</span>
-        <button className="btn" style={{lineHeight: 38}}onClick={async () => {
-          setShowLoading('block');
-          let result = await loadRemoteUrl(url);
-          setShowLoading('none');
-          setContent(result.data);
-
-        }}>从远端更新</button>
-        <div style={{ display: showLoading }}>
-          <div className="spinner-dot-intermittent"></div><span className="text-blue-500">获取远端内容...</span>
-        </div>
-
-        <div className="my-editor">
-          <VanillaJSONEditor
-            content={{
-              "json": content
-            }}
-            mode="text"
-            readOnly={true}
-            // onChange={(input) => { console.log('VanillaJSONEditor', input); }}
-          />
-        </div>
-        <div className="flex gap-3">
-          <button className="btn btn-outline-primary " onClick={async () => {
-            let editing = data.filter((o) => {
-              return o.url == url;
-            });
-            if (editing.length != 1) {
-              alert('数据错误');
-              return
-            }
-            let updated = editing[0];
-            updated.content = content;
-            onUpdateData(updated);
-
-            let stateinput = document.getElementById('modal-1');
-            stateinput.click();
-          }}>保存</button>
-          <label className="btn " htmlFor="modal-1">关闭</label>
-        </div>
-      </div>
-    </div>
-  </div>
-}
-
-async function getDefaultValue(key: string) {
-  let on: any = await storage.get(kDBKeySettings);
-  if(!on) {
-    on = {};
-    await storage.set(kDBKeySettings, on);
-  }
-  return on[key];
-}
-
-function Settings() {
-  const [tipsOn, setTipsOn] = useState(true);
-  const [autoClickDelay, setAutoClickDelay] = useState(1);// 2s
-  const [autoHideDelay, setAutoHideDelay] = useState(1);// 2s
-  const [observeInterval, setObserveInterval] = useState(1.5);//
-  const [tipsHideDelay, setTipsHideDelay] = useState(2);//
-  
-  useEffect(()=>{
-    let init =async () => {
-      let on: any = await storage.get(kDBKeySettings);
-      if(!on) {
-        on = {};
-      }
-      setTipsOn(on['tipsOn']);
-      setAutoHideDelay(on['autoHideDelay']);
-      setAutoClickDelay(on['autoClickDelay']);
-      setObserveInterval(on['observeInterval']);
-      setTipsHideDelay(on['tipsHideDelay']);
-    };
-    init();
-  },[]);
-
-  const updateValue = async function(key: string, val: any) {
-    try {
-      let on: any = await storage.get(kDBKeySettings);
-      if(!on) {
-        on = {};
-      }
-      on[key] = val;
-      storage.set(kDBKeySettings, on);
-    } catch (error) {
-      alert(error.message)
-    }
-  }
-
-  const saveUpdated = (e: FormEvent)=>{
-    let on = {};
-    on['tipsOn'] = tipsOn;
-    on['autoHideDelay'] = autoHideDelay;
-    on['autoClickDelay'] = autoClickDelay;
-    on['observeInterval'] = observeInterval;
-    on['tipsHideDelay'] = tipsHideDelay;
-    try {
-      storage.set(kDBKeySettings, on);
-    } catch (error) {
-      alert(error.message)
-    }
-    e.preventDefault();
-    return false;
-  }
-
-  return <div className="flex w-3/4 flex-col gap-6 bg-gray-2 rounded-x p-8 shadow-lg">
-	<div className="flex flex-row gap-2 items-end">
-		<h1 className="text-3xl font-semibold">高级设置</h1>
-		<p className="text-sm">在这里, 修改程序内置参数</p>
-	</div>
-  <form onSubmit={saveUpdated}>
-    <div className="form-group">
-      <div className="form-field">
-        <label className="form-label">提示当前执行的规则</label>
-        <div className="form-control justify-between">
-          <div className="flex gap-2">
-            <input type="checkbox" className="checkbox" id="tipsOn" checked={tipsOn} onChange={async (e)=>{
-              setTipsOn(e.target.checked);
-            }}/>
-            <label htmlFor="tipsOn" className="text-base">规则生效时,右上角显示提示条, 此提示条持续若干秒后自动消失.</label>
-          </div>
-        </div>
-      </div>
-      <div className="form-field pl-6">
-        <label className="form-label">提示条消失的延迟时间</label>
-        <input placeholder="延迟,以秒为单位, 范围: 1 ~ 10" type="number" step="0.01"required disabled={!tipsOn} min={1} max={10} className="input" value={tipsHideDelay} onChange={async (e)=>{
-              let val = parseFloat(e.target.value);
-              setTipsHideDelay(isNaN(val) ? tipsHideDelay : val);
-            }}/>
-        <label className="form-label">
-          <span className="form-label-alt">当某条规则被执行时,弹出的提示持续多少秒</span>
-        </label>
-      </div>
-      <div className="form-field">
-        <label className="form-label">自动隐藏元素的延迟</label>
-        <input placeholder="延迟,以秒为单位" type="number" step="0.01"className="input" required min={0} max={10} value={autoHideDelay} onChange={async (e)=>{
-          let val = parseFloat(e.target.value);
-          setAutoHideDelay(isNaN(val) ? autoHideDelay : val);
-        }}/>
-        <label className="form-label">
-          <span className="form-label-alt">在提示后,多久隐藏元素, 0 代表立即隐藏</span>
-        </label>
-      </div>
-      <div className="form-field">
-        <label className="form-label">自动点击元素的延迟</label>
-        <input placeholder="延迟,以秒为单位" type="number" step="0.01"className="input" required min={0} max={10} value={autoClickDelay} onChange={async (e)=>{
-              let val = parseFloat(e.target.value);
-              setAutoClickDelay(isNaN(val) ? autoClickDelay : val);
-            }}/>
-        <label className="form-label">
-          <span className="form-label-alt">在提示后,多久执行点击元素动作, 0 代表立即点击</span>
-        </label>
-      </div>
-      <div className="form-field">
-        <label className="form-label">检查页面变化的间隔时间</label>
-        <input placeholder="延迟,以秒为单位, 范围: 1 ~ 10" type="number" step="0.01"required min={1} max={10} className="input" value={observeInterval} onChange={async (e)=>{
-              let val = parseFloat(e.target.value);
-              setObserveInterval(isNaN(val) ? observeInterval : val);
-            }}/>
-        <label className="form-label">
-          <span className="form-label-alt">在用户浏览、滚动页面时,某些内容会动态的出现. 这里设置检查动态内容的间隔.<span className="text-warning"> 当间隔过小时,会影响电池续航,增加耗电量,但隐藏新出现元素的速度很快;当间隔过大,性能更好,但隐藏元素可能会有延迟,体验不好. 建议使用默认值.</span></span>
-        </label>
-      </div>
-    
-      <div className="form-field">
-        <button className="btn w-64 btn-primary">保存</button>
-      </div>
-    </div>
-  </form>
-</div>
 }
