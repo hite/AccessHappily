@@ -19,7 +19,7 @@ export const getStyle: PlasmoGetStyle = () => {
   const style = document.createElement("style");
   // https://github.com/PlasmoHQ/plasmo/issues/835
   style.textContent = styleText;
-  console.log(styleText);
+  // console.log(styleText);
   return style
 }
 
@@ -80,7 +80,7 @@ function markExecuting(rule: IRuleAction, ongoing: boolean) {
 }
 /////
 
-function executeRule(obj: IRuleAction, onFinish: (message: string)=> void) {
+async function executeRule(obj: IRuleAction, onFinish: (message: string)=> void) {
     let type = obj.type, data = obj.data;
     if(isExecuting(obj)) {
       console.info('the same rule is executing', obj.name);
@@ -114,19 +114,27 @@ function executeRule(obj: IRuleAction, onFinish: (message: string)=> void) {
       } else if (type == RuleActionType.autoNavigate) {
         let firstOne = elements[0];
         let link = firstOne.value || firstOne.innerText;
+        let autoHideDelay = await getDefaultValue('autoHideDelay');
+        if(isNaN(autoHideDelay)) {
+          autoHideDelay = 1;
+        }
         window.setTimeout(() => {
           window.location.assign(link);
           onFinish('已自动跳转到页面 ' + link + '， 规则名 ：' + obj.name);
           markExecuting(obj, false);
-        }, 1000);
+        }, autoHideDelay * 1000);
       } else {
+        let autoClickDelay = await getDefaultValue('autoClickDelay');
+        if(isNaN(autoClickDelay)) {
+          autoClickDelay = 1;
+        }
         window.setTimeout(() => {
           elements.forEach((e)=>{
             e.click();
           });
           onFinish('已自动点击元素， 规则名 ：' + obj.name);
           markExecuting(obj, false);
-        }, 1000);
+        }, autoClickDelay * 1000);
       }
       //
       sendToPop(obj);
@@ -218,8 +226,21 @@ let loadProcessHandler = async (onFinish: (message: string)=> void) => {
   listenContextMenuShow();
 };
 
+async function getDefaultValue(key: string) {
+  let on: any = await storage.get(kDBKeySettings);
+  if(!on) {
+    on = {};
+    await storage.set(kDBKeySettings, on);
+  }
+  return on[key];
+};
+
 let bounce = -1;
-let onElementAdded = function (mutationsList, checkHandler) {
+let onElementAdded = async function (mutationsList, checkHandler) {
+  let interval = await getDefaultValue('observeInterval');
+  if(isNaN(interval)||interval < 1) {
+    interval = 1;
+  }
   for (let mutation of mutationsList) {
     if (mutation.addedNodes && mutation.addedNodes.length > 0) {
       if(bounce !== -1) {
@@ -228,7 +249,7 @@ let onElementAdded = function (mutationsList, checkHandler) {
       bounce = window.setTimeout(()=>{
         checkHandler();
         bounce = -1;
-      }, 1500);
+      }, interval * 1000);
     }
   }
 };
@@ -328,12 +349,21 @@ function Content() {
 
 function Warning({ message, autoHideCallback }: { message: string, autoHideCallback: Function }) {
   useEffect(() => {
-    window.setTimeout(() => {
-      autoHideCallback();
-    }, 4000);
+    let init =async () => {
+      let tipsHideDelay = await getDefaultValue('tipsHideDelay');
+      if(isNaN(tipsHideDelay)) {
+        tipsHideDelay = 2;
+      }
+      window.setTimeout(() => {
+        autoHideCallback();
+      }, tipsHideDelay * 1000);
+    };
+    
+    init();
   }, []);
   return <div style={{
-    backgroundColor: "red",
+    borderColor: "red",
+    borderWidth: 1,
     position: "fixed",
     minWidth:200,
     left:0,
