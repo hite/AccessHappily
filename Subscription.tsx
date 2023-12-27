@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { FaExternalLinkAlt } from "react-icons/fa";
 import "./style.css";
 
 import VanillaJSONEditor from "./VanillaJSONEditor";
 
 import { Storage } from "@plasmohq/storage";
+import { AlertContext } from "~Context";
 const storage = new Storage()
 const kUniKey = 'KeyOfRuleForDomains';
 const kRemoteRule = 'kRemoteRuleForDomains';
@@ -19,7 +20,21 @@ interface RemoteRule {
   export default function Suscription() {
     let initialData: RemoteRule[] = [];
     const [data, setData] = useState(initialData);
-  
+    const [_, showAlert] = useContext(AlertContext);
+
+    function saveToDB(newData: any) {
+      try {
+        storage.set(kRemoteRule, newData);
+        showAlert({
+          type: 'success',
+          message: '保存成功',
+          autoHide: 2
+        })
+      } catch (error) {
+        alert('保存出错');
+      }
+    }
+
     useEffect(() => {
       storage.get(kRemoteRule).then((val) => {
         let list: any = val ? val : [];
@@ -50,14 +65,7 @@ interface RemoteRule {
     </div>
   }
   
-  function saveToDB(newData: any) {
-    try {
-      storage.set(kRemoteRule, newData);
-      alert('保存成功')
-    } catch (error) {
-      alert('保存出错')
-    }
-  }
+
   
   async function loadRemoteUrl(url: string) {
     const myHeaders = new Headers({
@@ -174,7 +182,7 @@ interface RemoteRule {
                   enabled: true
                 })
               } else {
-                throw new Error('内容错误');
+                alert('内容错误');
               }
             }}>添加</button>
   

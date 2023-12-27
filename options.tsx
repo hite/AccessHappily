@@ -37,8 +37,17 @@ function IndexPopup() {
   const [type, setType] = useState(RuleActionType.autoHide)
   const [name, setName] = useState("");
   const [data, setData] = useState("");
-
   const [editorContent, setEditorContent] = useState({});
+
+  const [_, showAlert] = useContext(AlertContext);
+
+  const showOk = (message: string)=>{
+    showAlert({
+      type: 'success',
+      message: message,
+      autoHide: 2
+    })
+  }
 
   const saveRule = async () => {
     let rule = { type, name, data}
@@ -54,7 +63,7 @@ function IndexPopup() {
     try {
       await storage.set(kUniKey, ruleJSON);
       setEditorContent(ruleJSON);
-      alert('保存成功');
+      showOk('保存成功');
     } catch (error) {
       alert('出错了：' + error.message);
     }
@@ -67,7 +76,7 @@ function IndexPopup() {
   const saveRawRule = async () => {
     try {
       await storage.set(kUniKey, editorContent);
-      alert('保存成功');
+      showOk('保存成功');
     } catch (error) {
       alert('出错了：' + error.message);
     }
@@ -99,6 +108,7 @@ function IndexPopup() {
         input.select();
         document.execCommand('copy');
         document.body.removeChild(input);
+        showOk('已复制');
     }
   };
 
@@ -117,6 +127,7 @@ function IndexPopup() {
               <HelpText text="如，example.com/path* , *.example.com/path, file.exmaple.com" />
             </div>
             <input className="input input-solid " placeholder="输入网页地址规则" type="text" id="name" required onChange={(e) => setDomain(e.target.value)} value={domain} />
+            <a className="link link-underline" href="#tab=2">前去测试规则是否符合预期</a>
           </div>
           <div className="form-field">
             <label className="text-base">类型</label>
@@ -152,7 +163,7 @@ function IndexPopup() {
           </div>
         </form>
     </div>
-    <div id="preview">
+    <div id="preview" className="mt-2">
       <div className="flex flex-row gap-2 items-center">
           <span className="text-lg font-medium">当前生效的规则预览 </span>
           <label className="flex cursor-pointer gap-1 text-red-600">
@@ -208,10 +219,7 @@ function IndexPopup() {
   </section>)
 }
 
-
-
 export default Options;
-
 
 function Options() {
   let [alert, showAlert] = useState<AlertState>(null);
@@ -224,8 +232,19 @@ function Options() {
 
 function SideBarContent() {
   const [alert, showAlert] = useContext(AlertContext);
-  const [activeTab, setActiveTab] = useState(0);
   let icons = [<MdOutlineDashboardCustomize/>, <FaSlideshare></FaSlideshare>,<GrDocumentTest></GrDocumentTest>, <FiSettings></FiSettings>];
+  let tabIdx = 0;
+  if(window.location.hash) {
+    let queryObjs = window.location.hash.replace('#','').split('&').filter((o)=>{return o.startsWith('tab=')});
+    if(queryObjs.length > 0){
+      tabIdx = parseInt(queryObjs[0].replace('tab=',''));
+      if(isNaN(tabIdx) || tabIdx <0 || tabIdx > icons.length){
+        tabIdx = 0;
+      }
+    }
+  }
+
+  const [activeTab, setActiveTab] = useState(tabIdx);
   let contents = [<IndexPopup/>, <Suscription></Suscription>, <PlayGround></PlayGround>,<Settings></Settings>];
   let content = contents[activeTab];
   let tabNames = ['编辑自定义规则','订阅远程规则','测试规则','设置'];
@@ -262,8 +281,8 @@ function SideBarContent() {
   },[alert])
 
   let logo = require('~/assets/icon.png');
-  return <div className="sticky flex flex-row overflow-y-auto rounded-lg shadow-lg sm:overflow-x-hidden">
-    <aside className="sidebar h-full justify-start m-4">
+  return <div className="sticky flex flex-row overflow-y-auto sm:overflow-x-hidden">
+    <aside className="sidebar h-full justify-start m-4 rounded-lg shadow-lg">
       <section className="sidebar-title items-center p-4">
         <div className="avatar">
           <img src={logo} alt="avatar" />

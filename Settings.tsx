@@ -11,7 +11,7 @@ export default function Settings() {
     const [observeInterval, setObserveInterval] = useState(1.5);//
     const [tipsHideDelay, setTipsHideDelay] = useState(2);//
     
-    const [alert, showAlert] = useContext(AlertContext);
+    const [_, showAlert] = useContext(AlertContext);
 
     useEffect(()=>{
       let init =async () => {
@@ -27,19 +27,6 @@ export default function Settings() {
       };
       init();
     },[]);
-  
-    const updateValue = async function(key: string, val: any) {
-      try {
-        let on: any = await storage.get(kDBKeySettings);
-        if(!on) {
-          on = {};
-        }
-        on[key] = val;
-        storage.set(kDBKeySettings, on);
-      } catch (error) {
-        alert(error.message)
-      }
-    }
   
     const saveUpdated = (e: FormEvent)=>{
       let on = {};
@@ -57,7 +44,7 @@ export default function Settings() {
           autoHide: 2
         });
       } catch (error) {
-        alert(error.message)
+        window.alert(error.message)
       }
       e.preventDefault();
       return false;

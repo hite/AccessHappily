@@ -38,7 +38,7 @@ function Popup() {
   }
 
   let trs = [<tr>
-    <th className="py-2" colSpan={4}>无生效的规则</th>
+    <th className="py-2" colSpan={5}>无生效的规则</th>
   </tr>];
 
   if(data.length > 0 ) {
