@@ -42,7 +42,7 @@ interface RemoteRule {
       });
     }, []);
   
-    return <div className="flex flex-col gap-8 bg-gray-2 rounded-x p-8 shadow-lg">
+    return <div className="flex flex-col gap-8 bg-gray-2 rounded-x p-8 shadow-l w-2/3">
       <AddSub onDataAdded={(added) => {
         let newData = [...data, added];
         setData(newData);

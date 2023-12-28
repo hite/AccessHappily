@@ -3,11 +3,6 @@ import "./style.css";
 
 import { isMatched } from "~rules";
 
-import { Storage } from "@plasmohq/storage"
-const storage = new Storage()
-const kUniKey = 'KeyOfRuleForDomains';
-const kRemoteRule = 'kRemoteRuleForDomains';
-const kDBKeySettings = 'kDBKeySettings';
 
 export default function PlayGround() {
     const [rule, setRule] = useState('');
