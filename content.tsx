@@ -4,7 +4,7 @@ import { builtinCSSInHost, getRules, getSelector, isMatched, type IRuleAction } 
 
 import { RuleActionType, builtinRule } from "~rules";
 // 这里很关键：引入基础样式，否则按钮没有背景色（rippleUI）
-import "./standalone.css";
+import "./standalone.scss";
 
 
 import { Storage } from "@plasmohq/storage"
@@ -12,14 +12,14 @@ const storage = new Storage()
 const kUniKey = 'KeyOfRuleForDomains';
 const kDBKeySettings = 'kDBKeySettings';
 // 生成文本
-import styleText from "data-text:./standalone.css";
+import styleText from "data-text:./standalone.scss";
 import type { PlasmoGetStyle } from "plasmo";
   // injectAnchor 的时候会注入 样式文件
 export const getStyle: PlasmoGetStyle = () => {
   const style = document.createElement("style");
   // https://github.com/PlasmoHQ/plasmo/issues/835
   style.textContent = styleText;
-  // console.log(styleText);
+  console.log(styleText);
   return style
 }
 
@@ -421,15 +421,21 @@ function AddPanel({selector, ruleType, ruleName, onClose}:{selector: string, rul
   // },[]);
 
   const highlightTest = (e: FormEvent)=>{
-    let ele = document.querySelector(data);
-    if(!ele) {
-      alert('没有找到该元素');
-    } else {
-      ele.className = ele.className + ' ah_highlight_elem';
+    try {
+      let ele = document.querySelector(data);
+      if(!ele) {
+        alert('没有找到该元素');
+        return;
+      } else {
+        ele.className = ele.className + ' ah_highlight_elem';
+      }
+      window.setTimeout(()=>{
+        ele.className = ele.className.replace(' ah_highlight_elem', '');
+      },1000);
+    } catch (error) {
+      alert(error.message);
     }
-    window.setTimeout(()=>{
-      ele.className = ele.className.replace(' ah_highlight_elem', '');
-    },1000);
+    
     e.preventDefault();
     return false;
   };
@@ -491,8 +497,10 @@ function AddPanel({selector, ruleType, ruleName, onClose}:{selector: string, rul
           <div className="form-field">
             <div className="form-control justify-between items-center">
               <button type="submit" className="rounded-lg btn btn-primary">保存</button>
-              <button className="btn" onClick={()=>{
-                onClose();
+              <button className="btn" onClick={(e)=>{
+                onClose(); 
+                e.preventDefault();
+                return false;
               }}>放弃</button>
             </div>
           </div>
