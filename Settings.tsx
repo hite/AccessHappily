@@ -19,7 +19,7 @@ export default function Settings() {
         if(!on) {
           on = {};
         }
-        setTipsOn(on['tipsOn']);
+        setTipsOn(!!on['tipsOn']);
         setAutoHideDelay(on['autoHideDelay']);
         setAutoClickDelay(on['autoClickDelay']);
         setObserveInterval(on['observeInterval']);
