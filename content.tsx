@@ -19,7 +19,7 @@ export const getStyle: PlasmoGetStyle = () => {
   const style = document.createElement("style");
   // https://github.com/PlasmoHQ/plasmo/issues/835
   style.textContent = styleText;
-  console.log(styleText);
+  // console.log(styleText);
   return style
 }
 
@@ -178,6 +178,7 @@ chrome.runtime.onMessage.addListener((msg, sender, response) => {
 
 let lastRightClickedElement = null;
 function listenContextMenuShow() {
+  console.log('Add contextmenu listener');
   document.body.addEventListener('contextmenu', function(ev) {
     lastRightClickedElement =  ev.target;
     console.log('interprite', lastRightClickedElement);
@@ -222,8 +223,6 @@ let loadProcessHandler = async (onFinish: (message: string)=> void) => {
     }
     executeRule(obj, onFinish)
   }
-  //
-  listenContextMenuShow();
 };
 
 async function getDefaultValue(key: string) {
@@ -292,6 +291,7 @@ function Content() {
       setShowPanel(true);
     });
     //
+    listenContextMenuShow();
   },[]);
 
   useEffect(()=>{

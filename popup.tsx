@@ -123,7 +123,7 @@ function Popup() {
           <FaExternalLinkAlt /><a href="/options.html" target="_blank">进入设置</a>{" "} 
         </div>
         <div className="font-bold flex flex-row gap-1 items-center text-blue-600 pt-4 pb-2 text-sm cursor-pointer" onClick={createNewRule}>
-          <IoIosCopy /> 一键去除文本选中限制
+          <IoIosCopy /> 去除文本选中限制
         </div>
       </div>
     </div>
