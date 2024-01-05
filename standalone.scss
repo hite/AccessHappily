@@ -564,6 +564,9 @@
         background-color: rgb(var(--ah-backgroundPrimary));
         border: 2px solid rgb(var(--ah-blue-5));
     }
+    .bg-backgroundSecondary{
+        background-color: rgb(var(--ah-backgroundSecondary));
+    }
     
     .text-primary{
         --ah-text-opacity: 1;
@@ -877,4 +880,11 @@
     .btn-primary:focus-visible {
         outline-color: rgb(var(--ah-primary));
     }
+    .whitespace-nowrap{
+        white-space: nowrap;
+    }
+}
+// custom css
+#plasmo-shadow-container {
+    position: fixed !important;
 }

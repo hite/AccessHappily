@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { IoMdSettings, IoIosCopy} from "react-icons/io";
+import { IoIosCreate, IoIosCopy} from "react-icons/io";
 import { FaExternalLinkAlt } from "react-icons/fa";
 import { FaQuestionCircle } from "react-icons/fa";
 import "./style.css";
@@ -33,6 +33,14 @@ function Popup() {
     chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
       chrome.tabs.sendMessage(tabs[0].id, {
           action: 'enableCopyText'
+      });
+    });
+  }
+  const startPicking = ()=>{
+    chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+      const kEventKeyPickingElement = 'kEventKeyPickingElement';
+      chrome.tabs.sendMessage(tabs[0].id, {
+          action: kEventKeyPickingElement
       });
     });
   }
@@ -118,12 +126,15 @@ function Popup() {
         </div>
       </div>
 
-      <div className=" border-indigo-500 flex flex-row justify-between">
-        <div className="font-bold flex flex-row gap-1 items-center text-blue-600 pt-4 pb-2 text-sm">
-          <FaExternalLinkAlt /><a href="/options.html" target="_blank">进入设置</a>{" "} 
-        </div>
+      <div className=" border-indigo-500 flex flex-col justify-between">
         <div className="font-bold flex flex-row gap-1 items-center text-blue-600 pt-4 pb-2 text-sm cursor-pointer" onClick={createNewRule}>
           <IoIosCopy /> 去除文本选中限制
+        </div>
+        <div className="font-bold flex flex-row gap-1 items-center text-blue-600 pt-4 pb-2 text-sm cursor-pointer" onClick={startPicking}>
+          <IoIosCreate /> 选中需要操作的元素
+        </div>
+        <div className="font-bold flex flex-row gap-1 items-center text-blue-600 pt-4 pb-2 text-sm">
+          <FaExternalLinkAlt /><a href="/options.html" target="_blank">进入设置</a>{" "} 
         </div>
       </div>
     </div>

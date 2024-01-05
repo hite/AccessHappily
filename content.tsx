@@ -25,6 +25,7 @@ export const getStyle: PlasmoGetStyle = () => {
 
 const kEventKeyContextMenus = 'kEventKeyContextMenus';
 const kEventKeyEnableCopy = 'kEventKeyEnableCopy';
+const kEventKeyPickingElement = 'kEventKeyPickingElement';
 // const eventEmitter = new EventEmitter();
 
 const setStyle = (styleText, num) => {
@@ -155,7 +156,7 @@ chrome.runtime.onMessage.addListener((msg, sender, response) => {
       {
         if(!lastRightClickedElement) {
           console.error('no element right clicked');
-          alert('没有获取到选中的元素,请更换右键位置再次尝试.')
+          alert('没有获取到选中的元素,请使用工具栏里 Popup 菜单里创建。')
           return;
         }
         eventEmitter.emit(kEventKeyContextMenus);
@@ -164,6 +165,11 @@ chrome.runtime.onMessage.addListener((msg, sender, response) => {
     case 'enableCopyText':
         {
           eventEmitter.emit(kEventKeyEnableCopy);
+        }
+        break;
+    case 'kEventKeyPickingElement':
+        {
+          eventEmitter.emit(kEventKeyPickingElement);
         }
         break;
     case 'getActiveRules':
@@ -253,8 +259,11 @@ let onElementAdded = async function (mutationsList, checkHandler) {
   }
 };
 
+let pickPhase_ext = '';
+
 function Content() {
   console.log(document.readyState);
+  const [pickPhase, setPickPhase] = useState('');
   const [hidden, setHidden] = useState(false);
   const [tips, setTips] = useState('已自动隐藏登录提示弹窗');
   const [tipsOn, setTipsOn]  = useState(true);
@@ -268,6 +277,54 @@ function Content() {
     setHidden(true);
     setTips(msg)
   }
+  function onPickPhaseChange(phrase: string) {
+    if(phrase == '') {
+      hideHighlightFrame();
+    }
+  }
+  const mouseOverHandler = (e)=>{
+    console.log(e.target, 'mouseenter');
+    if(e.target == highlightFrame) {
+      return true;
+    }
+    // 这里的 pickPhase  还是最开始闭包捕获的值
+    if(pickPhase_ext.length > 0){
+      showHighlightFrame(e.target as Element);
+      pickPhase_ext = 'picking';
+      setPickPhase(pickPhase_ext);
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    } else {
+      return true;
+    }
+  }
+  const mouseLeaveHandler = (e: Event)=>{
+    console.log(e.target, 'mouseLeaveHandler');
+    if(e.relatedTarget == highlightFrame) {
+      return true;
+    }
+    if(pickPhase_ext.length > 0){
+      hideHighlightFrame();
+    }
+    return true;
+  }
+  const clickHandler = (e: Event)=>{
+    console.log(e.target, 'clickHandler');
+    // 这里的 pickPhase  还是最开始闭包捕获的值
+    if(pickPhase_ext.length > 0){
+      pickPhase_ext = 'clicked';
+      setPickPhase(pickPhase_ext);
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      
+      lastRightClickedElement = e.target;
+      setShowPanel(true);
+      return false;
+    } else {
+      return true;
+    }
+  }
 
   useEffect(()=>{
     eventEmitter.add(kEventKeyContextMenus, ()=>{
@@ -276,7 +333,6 @@ function Content() {
       var selector = getSelector(lastRightClickedElement);
       if(selector) {
         setSelector(selector);
-        lastRightClickedElement = null;
       }
       const titleName = document.title || '<no_title_page>';
       setRuleName(titleName);
@@ -289,6 +345,11 @@ function Content() {
       setSelector(kEnableCopyCssText);
       setRuleType(RuleActionType.insertCSS);
       setShowPanel(true);
+    });
+    eventEmitter.add(kEventKeyPickingElement, ()=>{
+      setShowPanel(false);
+      pickPhase_ext = 'ready';
+      setPickPhase(pickPhase_ext);
     });
     //
     listenContextMenuShow();
@@ -328,11 +389,48 @@ function Content() {
     observer.observe(document, { childList: true, subtree: true });
   }, []);
 
+  useEffect(() => {
+    // 添加mouseenter事件，监听 click 事件，会触发元素本身的click事件，通常是点击后跳转或者展开
+    let all = document.querySelectorAll('body *');
+    all.forEach((e)=>{
+      e.addEventListener('click', clickHandler, true);
+    });
+    document.body.addEventListener('mouseover', mouseOverHandler, false);
+    document.body.addEventListener('mouseout', mouseLeaveHandler, false);
+  }, []);
+
   let UI = <span />;
-  if (showPanel) {
+  if(pickPhase.length > 0) {
+    if(pickPhase == 'ready') {
+      UI = <div>
+      <div className="flex flex-col items-center justify-center w-screen bg-backgroundSecondary text-primary h-12">
+        <div className=" text-center text-2xl whitespace-nowrap">Start To Select target You want to process</div>
+        <button className="btn-sm" onClick={()=>{
+          pickPhase_ext = '';
+          setPickPhase(pickPhase_ext);
+          setShowPanel(false);
+        }}>取消</button>
+      </div>
+    </div>;
+    } else if(pickPhase == 'picking'){
+      UI = <div>
+      <div className="flex flex-col items-center justify-center w-screen bg-backgroundSecondary text-primary h-12">
+        <button className="btn-sm btn-solid-warning" onClick={()=>{
+          setShowPanel(true);
+        }}>创建规则</button>
+        <button className="btn-sm" onClick={()=>{
+          pickPhase_ext = '';
+          setPickPhase(pickPhase_ext);
+          setShowPanel(false);
+        }}>取消</button>
+      </div>
+    </div>;
+    }
+  } else if (showPanel) {
     if(selector) {
       UI = <AddPanel selector={selector} ruleType={ruleType} ruleName={ruleName} onClose={()=>{
         setShowPanel(false);
+        lastRightClickedElement = null;
       }} />
     } else {
       UI = <div>
@@ -373,6 +471,46 @@ function Warning({ message, autoHideCallback }: { message: string, autoHideCallb
   }}>
     <span className="text-content2 alert-success">{message}</span>
   </div>
+}
+
+const highlightSelector = '#ah_highlight_frame';
+let highlightFrame = null;
+const highlightTest = (e: Element)=>{
+  try {
+    showHighlightFrame(e);
+
+    window.setTimeout(()=>{
+      highlightFrame.className = highlightFrame.className.replaceAll(' ah_highlight_elem', '');
+    },1000);
+  } catch (error) {
+    alert(error.message);
+  }
+};
+function hideHighlightFrame(){
+  if(highlightFrame){
+    highlightFrame.style.display = 'none';
+  }
+}
+
+function showHighlightFrame(targetEle: Element){
+  let ele = document.querySelector(highlightSelector) as HTMLDivElement;
+    if(!ele) {
+      console.info('没有找到该元素, create it first');
+      document.body.insertAdjacentHTML('beforeend',`<div id="${highlightSelector.substring(1)}" style="background-color: yellow !important;opacity: 0.3 !important;
+      z-index:99999999;position:absolute;display:block;"></div>`);
+      ele = document.querySelector(highlightSelector) as HTMLDivElement;
+    }
+    highlightFrame = ele;
+    // get position
+    let target = targetEle.getBoundingClientRect();
+    var X = target.left + document.documentElement.scrollLeft;
+    var Y = target.top + document.documentElement.scrollTop;
+    ele.style.width = target.width + 'px';
+    ele.style.height = target.height + 'px';
+    ele.style.left = X + 'px';
+    ele.style.top = Y + 'px';
+    ele.style.position = 'absolute';
+    ele.style.display = 'block';
 }
 
 function AddPanel({selector, ruleType, ruleName, onClose}:{selector: string, ruleType:RuleActionType, ruleName: string, onClose: Function}) {
@@ -420,25 +558,6 @@ function AddPanel({selector, ruleType, ruleName, onClose}:{selector: string, rul
   //   }
   // },[]);
 
-  const highlightTest = (e: FormEvent)=>{
-    try {
-      let ele = document.querySelector(data);
-      if(!ele) {
-        alert('没有找到该元素');
-        return;
-      } else {
-        ele.className = ele.className + ' ah_highlight_elem';
-      }
-      window.setTimeout(()=>{
-        ele.className = ele.className.replace(' ah_highlight_elem', '');
-      },1000);
-    } catch (error) {
-      alert(error.message);
-    }
-    
-    e.preventDefault();
-    return false;
-  };
   const testRule = (e: FormEvent)=>{
     if(isMatched(domain, location.href)) {
       let rule: IRuleAction = {
@@ -473,7 +592,15 @@ function AddPanel({selector, ruleType, ruleName, onClose}:{selector: string, rul
           <div className="form-field">
             <label className="form-label" htmlFor="message">匹配的选择器 (以及规则）<span className=" text-orange-600">谨慎修改</span></label>
             <input className="input input-solid max-w-full" id="message" placeholder="输入样式规则，可参考下方预览里内容" required onChange={(e) => setData(e.target.value)} value={data} />
-            <button className="btn-sm btn-solid-warning" onClick={highlightTest}>测试选择器</button><span className="form-label-alt">选中元素会边框变色闪烁(部分背景下不明显)</span>
+            <button className="btn-sm btn-solid-warning" onClick={(e)=>{
+              try {
+                highlightTest(document.querySelector(data))
+              } catch (error) {
+                alert(error.message);
+              }
+              e.preventDefault();
+              return false;
+            }}>测试选择器</button><span className="form-label-alt">选中元素会边框变色闪烁(部分背景下不明显)</span>
           </div>
           <div className="form-field">
             <label className="form-label">类型</label>
