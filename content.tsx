@@ -301,9 +301,6 @@ function Content() {
   }
   const mouseLeaveHandler = (e: Event)=>{
     console.log(e.target, 'mouseLeaveHandler');
-    if(e.relatedTarget == highlightFrame) {
-      return true;
-    }
     if(pickPhase_ext.length > 0){
       hideHighlightFrame();
     }
