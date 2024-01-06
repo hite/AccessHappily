@@ -364,7 +364,7 @@
   }
   
   button, [type="button"], [type="reset"], [type="submit"] {
-    -webkit-appearance: button;
+    appearance: button;
     background-color: #0000;
     background-image: none;
   }
@@ -389,19 +389,6 @@
     height: auto;
   }
   
-  [type="search"] {
-    -webkit-appearance: textfield;
-    outline-offset: -2px;
-  }
-  
-  ::-webkit-search-decoration {
-    -webkit-appearance: none;
-  }
-  
-  ::-webkit-file-upload-button {
-    -webkit-appearance: button;
-    font: inherit;
-  }
   
   summary {
     display: list-item;
