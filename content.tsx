@@ -4,22 +4,24 @@ import { builtinCSSInHost, getRules, getSelector, isMatched, type IRuleAction } 
 
 import { RuleActionType, builtinRule } from "~rules";
 // 这里很关键：引入基础样式，否则按钮没有背景色（rippleUI）
-import "./standalone.scss";
-
+// import "./standalone.scss";
+import "./style.css";
 
 import { Storage } from "@plasmohq/storage"
 const storage = new Storage()
 const kUniKey = 'KeyOfRuleForDomains';
 const kDBKeySettings = 'kDBKeySettings';
 // 生成文本
-import styleText from "data-text:./standalone.scss";
+// import styleText from "data-text:./standalone.scss";
+import styleText from "data-text:./style.css";
 import type { PlasmoGetStyle } from "plasmo";
+import { log } from "console";
   // injectAnchor 的时候会注入 样式文件
 export const getStyle: PlasmoGetStyle = () => {
   const style = document.createElement("style");
   // https://github.com/PlasmoHQ/plasmo/issues/835
   style.textContent = styleText;
-  // console.log(styleText);
+  // console.log(styleText2);
   return style
 }
 
@@ -282,6 +284,9 @@ function Content() {
     setPickPhase(pickPhase_ext);
     if(phase !== 'clicked') {
       setShowPanel(false);
+      if(phase === '') {
+        hideHighlightFrame();
+      }
     }
   }
   const mouseOverHandler = (e)=>{
@@ -553,20 +558,6 @@ function AddPanel({selector, ruleType, ruleName, onClose}:{selector: string, rul
     }
   }
 
-  // 确保弹窗的 root fontSize 不受影响
-  // useEffect(()=>{
-  //   let root = document.querySelector('html');
-  //   let orig = window.getComputedStyle(root).getPropertyValue('font-size');
-  //   if(orig != '16px' && orig != '62.5%') {
-  //     root.style['font-size'] =  '16px';
-  //   }
-  //   return ()=>{
-  //     if(orig != '16px') {
-  //       root.style['font-size'] =  orig;
-  //     }
-  //   }
-  // },[]);
-
   const testRule = (e: FormEvent)=>{
     if(isMatched(domain, location.href)) {
       let rule: IRuleAction = {
@@ -584,9 +575,32 @@ function AddPanel({selector, ruleType, ruleName, onClose}:{selector: string, rul
     return false;
   };
 
-  return <div style={{top: 100, left: 100}}
+  const [moved, setMoved] = useState({top: 0, left: 0});
+  let lastX = 0,lastY = 0;
+  const onMouseDown = (e: MouseEvent) => {
+    const ele = e.target;
+    lastX = e.clientX,lastY = e.clientY;
+    console.log('movedown client',e.clientX,e.clientY);
+
+    const onMouseMove = (e: any) => {
+      const moveX = e.clientX - lastX;
+      const moveY = e.clientY - lastY;
+      console.log('client',e.clientX,e.clientY);
+      console.log('last',lastX,lastY);
+      setMoved({top: moved.top + moveY, left: moved.left + moveX});
+    }
+    document.addEventListener('mousemove', onMouseMove);
+    const onMouseUp = (e: any) => {
+      console.log(e.clientX, e.clientY);
+      // lastX = 0,lastY = 0;
+      document.removeEventListener('mousemove', onMouseMove);
+    }
+    document.addEventListener('mouseup', onMouseUp);
+  };
+
+  return <div style={moved}
     className="cl-s rounded-sm bg-backgroundPrimary w-96 p-4 fixed ring-2 ring-offset-2 ring-blue-500">
-      <div className="cursor-move h-3 text-sm text-center">按住拖动浮层</div>
+      <div className="cursor-move h-5 text-sm text-center select-none opacity-75" onMouseDown={onMouseDown}>按住拖动浮层</div>
       <div className="mx-auto flex w-full max-w-sm flex-col gap-6">
         <div className="flex flex-col gap-1">
           <h1 className="text-3xl font-semibold text-primary">手动添加规则 （beta）</h1>
