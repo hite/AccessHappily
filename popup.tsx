@@ -35,6 +35,7 @@ function Popup() {
           action: 'enableCopyText'
       });
     });
+    window.close();
   }
   const startPicking = ()=>{
     chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
@@ -43,6 +44,8 @@ function Popup() {
           action: kEventKeyPickingElement
       });
     });
+
+    window.close();
   }
 
   let trs = [<tr>

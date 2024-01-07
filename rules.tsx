@@ -21,13 +21,18 @@ export interface IRule {
 
 export const builtinCSSInHost = `
 @keyframes ah_blink {
-  0% { opacity: 0.3;  }
-  50% { opacity: 0.7}
-  100% { opacity: 0.3}
+  0% { opacity: 0.3; background-color: red; }
+  50% { opacity: 1;background-color: blue; }
+  100% { opacity: 0.3;background-color: red; }
 }
 
 .ah_highlight_elem {
   animation: ah_blink 1s linear;
+}
+.ah_highlight_frame {
+  background-color: red !important;
+  z-index:99999999;
+  position:absolute;
 }
 `
 
@@ -137,10 +142,30 @@ export function getSelector(_target: Element): string {
     } else {
       let classNameList = clsName.split(' ').filter((o)=>{return o && o.length > 0});// replace(' ', '.')
       if(classNameList.length > 0) {
+        if(classNameList.length > 2) {
+          classNameList.length = 2;
+        }
         classList.push('.' + classNameList.join('.'));
+      } else {
+        // 不存在 id，也不存在 class
+        classList.push(_target.tagName.toLowerCase());
       }
       _target = _target.parentElement;
     }
+  }
+  // classList 过长影响 querySelector 的执行（报错）
+  // 保留第一个，重要
+  if(classList.length > 4) {
+    // 清洗  tagName
+    classList = classList.filter((o, idx)=>{
+      if(idx == 0)
+        return true;
+      return o && (o.startsWith('.') || o.startsWith('#'));
+    });
+  }
+  // 还大于 4
+  if(classList.length > 4){
+
   }
   return classList.reverse().join(' ');
 }

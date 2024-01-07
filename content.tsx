@@ -1,19 +1,19 @@
 import { useEffect, useState, type FormEvent } from "react";
 import eventEmitter, { EventEmitter} from "~EventEmitter";
 import { builtinCSSInHost, getRules, getSelector, isMatched, type IRuleAction } from "~rules";
-
+import { FaQuestionCircle } from "react-icons/fa";
 import { RuleActionType, builtinRule } from "~rules";
 // 这里很关键：引入基础样式，否则按钮没有背景色（rippleUI）
-// import "./standalone.scss";
-import "./style.css";
+import "./standalone.scss";
+// import "./style.css";
 
 import { Storage } from "@plasmohq/storage"
 const storage = new Storage()
 const kUniKey = 'KeyOfRuleForDomains';
 const kDBKeySettings = 'kDBKeySettings';
 // 生成文本
-// import styleText from "data-text:./standalone.scss";
-import styleText from "data-text:./style.css";
+import styleText from "data-text:./standalone.scss";
+// import styleText from "data-text:./style.css";
 import type { PlasmoGetStyle } from "plasmo";
 import { log } from "console";
   // injectAnchor 的时候会注入 样式文件
@@ -306,13 +306,10 @@ function Content() {
   }
   const mouseLeaveHandler = (e: Event)=>{
     // console.log(e.target, 'mouseLeaveHandler');
-    let elem = e.target as Element;
-    if(elem.className.includes(highlightFrameClass)) {
-      return true;
-    }
-    if(pickPhase_ext == 'picking'){
-      hideHighlightFrame();
-    }
+    // let elem = e.target as Element;
+    // if(elem.className.includes(highlightFrameClass)) {
+    //   return true;
+    // }
     return true;
   }
   const clickHandler = (e: Event)=>{
@@ -355,8 +352,10 @@ function Content() {
     
     eventEmitter.add(kEventKeyPickingElement, ()=>{
       onPickPhaseChange('picking');
-      //
       let doc = document.body;
+      // close popup window
+      doc.click();
+      //
       if(!doc.getAttribute('ah-pickingEvent-attached')) {
         // 添加mouseenter事件，监听 click 事件，会触发元素本身的click事件，通常是点击后跳转或者展开
         let all = document.querySelectorAll('body *');
@@ -408,14 +407,13 @@ function Content() {
 
   let UI = <span />;
   if(pickPhase == 'picking' && !showPanel) {
-    UI = <div>
-      <div className="flex flex-col items-center justify-center w-screen bg-backgroundSecondary text-primary h-12">
-        <div className=" text-center text-2xl whitespace-nowrap">Start To Select target You want to process</div>
-        <button className="btn-sm" onClick={()=>{
-          onPickPhaseChange('');
-        }}>取消</button>
-      </div>
-    </div>;
+    UI = <div className="fixed flex flex-col items-center gap-1 justify-center w-screen bg-backgroundSecondary text-primary">
+    <div className=" text-center text-xl whitespace-nowrap">1，移动鼠标，选择需要操作的元素</div>
+    <div className=" text-center text-xl whitespace-nowrap">2，左键点击元素,确认创建规则</div>
+    <button className="btn-sm btn" onClick={()=>{
+      onPickPhaseChange('');
+    }}>取消</button>
+  </div>;
   } else if (showPanel) {
     if(selector) {
       UI = <AddPanel selector={selector} ruleType={ruleType} ruleName={ruleName} onClose={()=>{
@@ -423,6 +421,8 @@ function Content() {
         lastRightClickedElement = null;
         if(pickPhase == 'clicked') {
           onPickPhaseChange('picking');
+        } else {
+          onPickPhaseChange('');
         }
       }} />
     } else {
@@ -469,32 +469,42 @@ function Warning({ message, autoHideCallback }: { message: string, autoHideCallb
 const highlightFrameClass = 'ah_highlight_frame';
 const highlightSelector = '.' + highlightFrameClass;
 let highlightLeftFrame = null, highlightTopFrame = null ,highlightRightFrame = null, highlightBottomFrame = null;
+let highlightFrames = function() { 
+  return [highlightLeftFrame, highlightTopFrame, highlightRightFrame, highlightBottomFrame]
+};
 const highlightTest = (e: Element)=>{
   try {
     showHighlightFrame(e);
+    //
+    highlightFrames().forEach((o)=>{
+      o.className += ' ah_highlight_elem';
+    });
+    window.setTimeout(() => {
+      highlightFrames().forEach((o)=>{
+        o.className = o.className.replace('ah_highlight_elem', '');
+      });
+    }, 2000);
   } catch (error) {
     alert(error.message);
   }
 };
 function hideHighlightFrame(){
   if(highlightLeftFrame){
-    // highlightLeftFrame.style.display = 'none';
-    // highlightTopFrame.style.display = 'none';
-    // highlightRightFrame.style.display = 'none';
-    // highlightBottomFrame.style.display = 'none';
+    highlightFrames().forEach((o)=>{
+      o.style.display = 'none';
+    });
   }
 }
 
 function showHighlightFrame(targetEle: Element){
   let topEle = document.querySelector(highlightSelector+'_top') as HTMLDivElement;
   const borderWidth = 2;
-  const borderStyle = 'background-color: red !important;z-index:99999999;position:absolute';
     if(!topEle) {
       console.info('没有找到该元素, create it first');
-      document.body.insertAdjacentHTML('beforeend',`<div class="${highlightFrameClass +' '+ highlightFrameClass}_top" style="${borderStyle}"></div>
-      <div class="${highlightFrameClass +' '+ highlightFrameClass}_left" style="${borderStyle}"></div>
-      <div class="${highlightFrameClass +' '+ highlightFrameClass}_right" style="${borderStyle}"></div>
-      <div class="${highlightFrameClass +' '+ highlightFrameClass}_bottom" style="${borderStyle}"></div>`);
+      document.body.insertAdjacentHTML('beforeend',`<div class="${highlightFrameClass +' '+ highlightFrameClass}_top" ></div>
+      <div class="${highlightFrameClass +' '+ highlightFrameClass}_left" ></div>
+      <div class="${highlightFrameClass +' '+ highlightFrameClass}_right" ></div>
+      <div class="${highlightFrameClass +' '+ highlightFrameClass}_bottom" ></div>`);
       topEle = document.querySelector(highlightSelector+'_top') as HTMLDivElement;
     }
     highlightTopFrame = topEle;
@@ -525,6 +535,10 @@ function showHighlightFrame(targetEle: Element){
     highlightBottomFrame.style.height = borderWidth + 'px';
     highlightBottomFrame.style.left = X + 'px';
     highlightBottomFrame.style.top = (Y + h) + 'px';
+
+    highlightFrames().forEach((o)=>{
+      o.style.display = 'block';
+    });
 }
 
 function AddPanel({selector, ruleType, ruleName, onClose}:{selector: string, ruleType:RuleActionType, ruleName: string, onClose: Function}) {
@@ -567,6 +581,7 @@ function AddPanel({selector, ruleType, ruleName, onClose}:{selector: string, rul
         _domain: domain,
       }
       executeRule(rule, ()=>{});
+      hideHighlightFrame();
     } else {
       alert('网页地址规则不匹配当前页面');
     }
@@ -577,21 +592,20 @@ function AddPanel({selector, ruleType, ruleName, onClose}:{selector: string, rul
 
   const [moved, setMoved] = useState({top: 0, left: 0});
   let lastX = 0,lastY = 0;
-  const onMouseDown = (e: MouseEvent) => {
-    const ele = e.target;
+  const onMouseDown = (e: any) => {
     lastX = e.clientX,lastY = e.clientY;
     console.log('movedown client',e.clientX,e.clientY);
 
     const onMouseMove = (e: any) => {
       const moveX = e.clientX - lastX;
       const moveY = e.clientY - lastY;
-      console.log('client',e.clientX,e.clientY);
-      console.log('last',lastX,lastY);
+      // console.log('client',e.clientX,e.clientY);
+      // console.log('last',lastX,lastY);
       setMoved({top: moved.top + moveY, left: moved.left + moveX});
     }
     document.addEventListener('mousemove', onMouseMove);
     const onMouseUp = (e: any) => {
-      console.log(e.clientX, e.clientY);
+      // console.log(e.clientX, e.clientY);
       // lastX = 0,lastY = 0;
       document.removeEventListener('mousemove', onMouseMove);
     }
@@ -600,23 +614,24 @@ function AddPanel({selector, ruleType, ruleName, onClose}:{selector: string, rul
 
   return <div style={moved}
     className="cl-s rounded-sm bg-backgroundPrimary w-96 p-4 fixed ring-2 ring-offset-2 ring-blue-500">
-      <div className="cursor-move h-5 text-sm text-center select-none opacity-75" onMouseDown={onMouseDown}>按住拖动浮层</div>
-      <div className="mx-auto flex w-full max-w-sm flex-col gap-6">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-3xl font-semibold text-primary">手动添加规则 （beta）</h1>
-          <p className="text-xs text-yellow-600">以下生成规则大部分情况下不需要修改，除非你懂 HTML/CSS</p>
+      <div className="cursor-move text-sm text-center select-none opacity-75 divider divider-horizontal mt-0" onMouseDown={onMouseDown}>按住拖动浮层</div>
+      <div className="mx-auto flex w-full max-w-sm flex-col gap-2">
+        <div className="flex flex-row items-center gap-1 tooltip tooltip-top" data-tooltip="以下生成规则大部分情况下不需要修改，除非你懂 HTML/CSS">
+          <h1 className="text-base font-semibold ">手动添加规则（beta）</h1>
+          <FaQuestionCircle />
         </div>
         <form className="form-group" onSubmit={saveRule}>
           <div className="form-field">
             <label className="form-label">网页地址规则 <span className="text-sm form-label-alt text-indigo-600">小心修改</span></label>
-            <input className="input input-solid max-w-full" placeholder="输入网页地址规则" type="text" id="name" required onChange={(e) => setDomain(e.target.value)} value={domain} />
-            <label className="form-label">
-              <span className=" form-label-alt">如，example.com/path* , *.example.com/path, file.exmaple.com</span>
-            </label>
+            <div className="tooltip tooltip-top" data-tooltip="如，example.com/path* ， *.example.com/path, file.exmaple.com">
+              <input className="input input-solid max-w-full" placeholder="输入网页地址规则" type="text" id="name" required onChange={(e) => setDomain(e.target.value)} value={domain} />
+            </div>
           </div>
           <div className="form-field">
             <label className="form-label" htmlFor="message">匹配的选择器 (以及规则）<span className=" text-orange-600">谨慎修改</span></label>
-            <input className="input input-solid max-w-full" id="message" placeholder="输入样式规则，可参考下方预览里内容" required onChange={(e) => setData(e.target.value)} value={data} />
+            <div className="tooltip tooltip-top" data-tooltip="支持 CSS 3 选择器 和自定义 :contains('目标内容'）选择器">
+              <input className="input input-solid max-w-full" id="message" placeholder="输入样式规则，可参考下方预览里内容" required onChange={(e) => setData(e.target.value)} value={data} />
+            </div>
             <button className="btn-sm btn-solid-warning" onClick={(e)=>{
               try {
                 highlightTest(document.querySelector(data))
@@ -625,7 +640,7 @@ function AddPanel({selector, ruleType, ruleName, onClose}:{selector: string, rul
               }
               e.preventDefault();
               return false;
-            }}>测试选择器</button><span className="form-label-alt">选中元素会边框变色闪烁(部分背景下不明显)</span>
+            }}>测试选择器</button>
           </div>
           <div className="form-field">
             <label className="form-label">类型</label>
@@ -641,10 +656,9 @@ function AddPanel({selector, ruleType, ruleName, onClose}:{selector: string, rul
           </div>
           <div className="form-field">
             <label className="form-label">规则名称 <span className="text-green-700">建议修改</span></label>
-            <input className="input input-solid max-w-full" id="name" placeholder="输入对样式规则对描述，便于区别" required onChange={(e) => setName(e.target.value)} value={name} />
-            <label className="form-label">
-              <span className="form-label-alt">设置为容易记忆的名称</span>
-            </label>
+            <div className="tooltip tooltip-top" data-tooltip="设置为容易记忆的名称">
+              <input className="input input-solid max-w-full" id="name" placeholder="输入对样式规则对描述，便于区别" required onChange={(e) => setName(e.target.value)} value={name} />
+            </div>
           </div>
           <div className="form-field">
             <div className="form-control justify-between items-center">
@@ -653,7 +667,7 @@ function AddPanel({selector, ruleType, ruleName, onClose}:{selector: string, rul
                 onClose(); 
                 e.preventDefault();
                 return false;
-              }}>放弃</button>
+              }}>取消</button>
             </div>
           </div>
         </form>
