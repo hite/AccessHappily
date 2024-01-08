@@ -4,18 +4,18 @@ import { builtinCSSInHost, getRules, getSelector, isMatched, type IRuleAction } 
 import { FaQuestionCircle } from "react-icons/fa";
 import { RuleActionType, builtinRule } from "~rules";
 // 这里很关键：引入基础样式，否则按钮没有背景色（rippleUI）
-import "./standalone.scss";
-// import "./style.css";
+// import "./standalone.scss";
+import "../style.css";
 
 import { Storage } from "@plasmohq/storage"
 const storage = new Storage()
 const kUniKey = 'KeyOfRuleForDomains';
 const kDBKeySettings = 'kDBKeySettings';
 // 生成文本
-import styleText from "data-text:./standalone.scss";
-// import styleText from "data-text:./style.css";
+// import styleText from "data-text:./standalone.scss";
+import styleText from "data-text:../style.css";
 import type { PlasmoGetStyle } from "plasmo";
-import { log } from "console";
+
   // injectAnchor 的时候会注入 样式文件
 export const getStyle: PlasmoGetStyle = () => {
   const style = document.createElement("style");
@@ -27,6 +27,7 @@ export const getStyle: PlasmoGetStyle = () => {
 
 const kEventKeyContextMenus = 'kEventKeyContextMenus';
 const kEventKeyEnableCopy = 'kEventKeyEnableCopy';
+const kEventKeyExportText = 'kEventKeyExportText';
 const kEventKeyPickingElement = 'kEventKeyPickingElement';
 // const eventEmitter = new EventEmitter();
 
@@ -110,7 +111,7 @@ async function executeRule(obj: IRuleAction, onFinish: (message: string)=> void)
     if (elements.length > 0) {
       if (type ==  RuleActionType.autoHide) {
         elements.forEach((e)=>{
-          e.style = 'display:none !important';
+          e.style = 'position:absolute !important;right: -10000px !important;';
         });
         onFinish('已自动隐藏元素， 规则名 ：' + obj.name);
         markExecuting(obj, false);
@@ -169,7 +170,12 @@ chrome.runtime.onMessage.addListener((msg, sender, response) => {
           eventEmitter.emit(kEventKeyEnableCopy);
         }
         break;
-    case 'kEventKeyPickingElement':
+    case 'exportText':
+        {
+          eventEmitter.emit(kEventKeyExportText);
+        }
+        break;
+    case 'pickingElement':
         {
           eventEmitter.emit(kEventKeyPickingElement);
         }
@@ -261,32 +267,30 @@ let onElementAdded = async function (mutationsList, checkHandler) {
   }
 };
 
+// 这两个值用在 eventHanlder 或者 function 内，因为对应的 state value 当作 const 被捕获；
 let pickPhase_ext = '';
-
+let pickType_ext = '';
 function Content() {
   console.log(document.readyState);
   const [pickPhase, setPickPhase] = useState('');
-  const [hidden, setHidden] = useState(false);
-  const [tips, setTips] = useState('已自动隐藏登录提示弹窗');
-  const [tipsOn, setTipsOn]  = useState(true);
+  const [pickType, setPickType] = useState('selector');
+  const [tips, setTips] = useState(null);
+  const [tipsOn, setTipsOn] = useState(true);
 
   const [selector, setSelector] = useState(null);
   const [ruleName, setRuleName] = useState('规则名称');
   const [ruleType, setRuleType] = useState(RuleActionType.autoHide);
-  const [showPanel, setShowPanel] = useState(false);
+  const [uiType, setUIType] = useState('');
+  const [copyHTML, setCopyHTML] = useState('<p>内容为空</p>');
 
   const showTips = (msg) => {
-    setHidden(true);
     setTips(msg)
   }
   function onPickPhaseChange(phase: string) {
     pickPhase_ext = phase;
     setPickPhase(pickPhase_ext);
-    if(phase !== 'clicked') {
-      setShowPanel(false);
-      if(phase === '') {
-        hideHighlightFrame();
-      }
+    if(phase === '') {
+      hideHighlightFrame();
     }
   }
   const mouseOverHandler = (e)=>{
@@ -320,9 +324,15 @@ function Content() {
       e.preventDefault();
       e.stopImmediatePropagation();
       
-      lastRightClickedElement = e.target;
+      if(pickType_ext == 'exporting') {
+        const ele = e.target as HTMLElement;
+        setUIType('copyable');
+        setCopyHTML(ele.outerHTML);
+      } else {
+        lastRightClickedElement = e.target;
+        eventEmitter.emit(kEventKeyContextMenus, '');
+      }
       
-      eventEmitter.emit(kEventKeyContextMenus, '');
       return false;
     } else {
       return true;
@@ -331,7 +341,6 @@ function Content() {
 
   useEffect(()=>{
     eventEmitter.add(kEventKeyContextMenus, ()=>{
-      setShowPanel(false);
 
       var selector = getSelector(lastRightClickedElement);
       if(selector) {
@@ -339,22 +348,17 @@ function Content() {
       }
       const titleName = document.title || '<no_title_page>';
       setRuleName(titleName);
-      setShowPanel(true);
+      setUIType('panel');
     });
     eventEmitter.add(kEventKeyEnableCopy, ()=>{
-      setShowPanel(false);
-
       setRuleName('去掉不可复制的限制');
       setSelector(kEnableCopyCssText);
       setRuleType(RuleActionType.insertCSS);
-      setShowPanel(true);
+      setUIType('panel');
     });
     
-    eventEmitter.add(kEventKeyPickingElement, ()=>{
-      onPickPhaseChange('picking');
+    let setupPickingEvent = ()=>{
       let doc = document.body;
-      // close popup window
-      doc.click();
       //
       if(!doc.getAttribute('ah-pickingEvent-attached')) {
         // 添加mouseenter事件，监听 click 事件，会触发元素本身的click事件，通常是点击后跳转或者展开
@@ -366,6 +370,21 @@ function Content() {
         document.body.addEventListener('mouseout', mouseLeaveHandler, false);
         doc.setAttribute('ah-pickingEvent-attached', 'true');
       }
+    };
+    eventEmitter.add(kEventKeyPickingElement, ()=>{
+      pickType_ext = 'selector';
+      setPickType(pickType_ext);
+
+      onPickPhaseChange('picking');
+      setUIType('picking');
+      setupPickingEvent();
+    });
+    eventEmitter.add(kEventKeyExportText, ()=>{
+      pickType_ext = 'exporting';
+      setPickType(pickType_ext);
+      setUIType('picking');
+      onPickPhaseChange('picking');
+      setupPickingEvent();
     });
     //
     listenContextMenuShow();
@@ -405,24 +424,32 @@ function Content() {
     observer.observe(document, { childList: true, subtree: true });
   }, []);
 
-  let UI = <span />;
-  if(pickPhase == 'picking' && !showPanel) {
-    UI = <div className="fixed flex flex-col items-center gap-1 justify-center w-screen bg-backgroundSecondary text-primary">
-    <div className=" text-center text-xl whitespace-nowrap">1，移动鼠标，选择需要操作的元素</div>
-    <div className=" text-center text-xl whitespace-nowrap">2，左键点击元素,确认创建规则</div>
-    <button className="btn-sm btn" onClick={()=>{
-      onPickPhaseChange('');
-    }}>取消</button>
-  </div>;
-  } else if (showPanel) {
+  // console.info(copyHTML);
+  let UI = null;
+  if(uiType == 'copyable') {
+      UI = <Copyable innerHTML={copyHTML} onClose={()=>{
+        onPickPhaseChange('');
+        setUIType('');
+      }} />
+  } else if(uiType == 'picking') {
+      UI = <div className="fixed p-2 flex flex-col items-center gap-1 justify-center w-screen bg-backgroundSecondary/75 text-primary ring-1 ring-offset-1 ring-blue-500">
+      <div className=" text-center text-xl whitespace-nowrap">1，移动鼠标，选择需要操作的元素</div>
+      <div className=" text-center text-xl whitespace-nowrap">2，左键点击元素,确认{pickType =='exporting'?'导出内容':'创建规则'}</div>
+      <button className="btn-sm btn" onClick={()=>{
+        onPickPhaseChange('');
+        setUIType('');
+      }}>取消</button>
+    </div>;
+  } else if (uiType == 'panel') {
     if(selector) {
       UI = <AddPanel selector={selector} ruleType={ruleType} ruleName={ruleName} onClose={()=>{
-        setShowPanel(false);
         lastRightClickedElement = null;
         if(pickPhase == 'clicked') {
           onPickPhaseChange('picking');
+          setUIType('picking');
         } else {
           onPickPhaseChange('');
+          setUIType('');
         }
       }} />
     } else {
@@ -430,10 +457,16 @@ function Content() {
         <span className="text-red-600">数据错误, 没有选中元素</span>
       </div>;
     }
-  } else if (hidden && tipsOn) {
-    UI = <Warning message={tips} autoHideCallback={() => {
-      setHidden(false);
+  }
+  if(tips && tipsOn) {
+    const UI2 = <Warning key={'warning'} message={tips} autoHideCallback={() => {
+      setTips('');
     }}></Warning>
+    if(UI){
+      return [UI, UI2];
+    } else {
+      return UI2;
+    }
   }
   return UI;
 }
@@ -456,7 +489,7 @@ function Warning({ message, autoHideCallback }: { message: string, autoHideCallb
     borderColor: "red",
     borderWidth: 1,
     position: "fixed",
-    minWidth:200,
+    whiteSpace:"nowrap",
     left:0,
     top:0,
     fontSize: 14,
@@ -675,4 +708,19 @@ function AddPanel({selector, ruleType, ruleName, onClose}:{selector: string, rul
     </div>;
 }
 
+function Copyable({innerHTML, onClose}:{innerHTML: string, onClose: () => void}) {
+  return <div className="h-screen w-screen fixed">
+      <div id="mask" className="opacity-75 bg-slate-400 w-full h-full absolute">
+      </div>
+      <div className="w-full h-full rounded absolute">
+          <div className="m-auto w-3/5 p-4 bg-white relative max-h-full overflow-scroll">
+              <div className="absolute top-4 right-4 text-primary">
+                  <button className="btn btn-outline-primary" onClick={onClose}>关闭浮层</button>
+              </div>
+              <h1 className="text-2xl font-bold mb-4 text-primary">复制以下内容</h1>
+              <div className="border-indigo-500/75 border-dashed border-2 rounded p-4" dangerouslySetInnerHTML={{ __html: innerHTML }}></div>
+          </div>
+      </div>
+  </div>
+}
 export default Content

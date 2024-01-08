@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { IoIosCreate, IoIosCopy} from "react-icons/io";
-import { FaExternalLinkAlt } from "react-icons/fa";
+import { FaExternalLinkAlt, FaFileExport } from "react-icons/fa";
 import { FaQuestionCircle } from "react-icons/fa";
 import "./style.css";
 import { disableRules, type IRuleAction } from "~rules";
@@ -28,24 +28,26 @@ function Popup() {
       });
     });
   }, []);
-
-  const createNewRule = ()=>{
+  const _sendMessageToActiveTab = (param: any) =>{
     chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
-      chrome.tabs.sendMessage(tabs[0].id, {
-          action: 'enableCopyText'
-      });
+      chrome.tabs.sendMessage(tabs[0].id, param);
     });
     window.close();
   }
+  const exportText = ()=>{
+      _sendMessageToActiveTab({
+          action: 'exportText'
+      })
+  }
+  const createNewRule = ()=>{
+    _sendMessageToActiveTab({
+      action: 'enableCopyText'
+    })
+  }
   const startPicking = ()=>{
-    chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
-      const kEventKeyPickingElement = 'kEventKeyPickingElement';
-      chrome.tabs.sendMessage(tabs[0].id, {
-          action: kEventKeyPickingElement
-      });
+    _sendMessageToActiveTab({
+      action: 'pickingElement'
     });
-
-    window.close();
   }
 
   let trs = [<tr>
@@ -133,8 +135,11 @@ function Popup() {
         <div className="font-bold flex flex-row gap-1 items-center text-blue-600 pt-4 pb-2 text-sm cursor-pointer" onClick={createNewRule}>
           <IoIosCopy /> 去除文本选中限制
         </div>
+        <div className="font-bold flex flex-row gap-1 items-center text-blue-600 pt-4 pb-2 text-sm cursor-pointer" onClick={exportText}>
+          <FaFileExport></FaFileExport>强制提取文本内容
+        </div>
         <div className="font-bold flex flex-row gap-1 items-center text-blue-600 pt-4 pb-2 text-sm cursor-pointer" onClick={startPicking}>
-          <IoIosCreate /> 选中需要操作的元素
+          <IoIosCreate /> 手动创建规则 （beta）
         </div>
         <div className="font-bold flex flex-row gap-1 items-center text-blue-600 pt-4 pb-2 text-sm">
           <FaExternalLinkAlt /><a href="/options.html" target="_blank">进入设置</a>{" "} 
