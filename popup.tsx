@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import { IoIosCreate, IoIosCopy} from "react-icons/io";
+import { IoIosCreate, IoIosCopy, IoIosSettings} from "react-icons/io";
 import { FaExternalLinkAlt, FaFileExport } from "react-icons/fa";
 import { FaQuestionCircle } from "react-icons/fa";
 import "./style.css";
@@ -142,7 +142,7 @@ function Popup() {
           <IoIosCreate /> 手动创建规则 （beta）
         </div>
         <div className="font-bold flex flex-row gap-1 items-center text-blue-600 py-2 text-sm">
-          <FaExternalLinkAlt /><a href="/options.html" target="_blank">进入设置</a>{" "} 
+          <IoIosSettings /><a href="/options.html" target="_blank">进入设置</a>{" "} 
         </div>
       </div>
     </div>

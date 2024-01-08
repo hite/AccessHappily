@@ -4,16 +4,16 @@ import { builtinCSSInHost, getRules, getSelector, isMatched, type IRuleAction } 
 import { FaQuestionCircle } from "react-icons/fa";
 import { RuleActionType, builtinRule } from "~rules";
 // 这里很关键：引入基础样式，否则按钮没有背景色（rippleUI）
-// import "./standalone.scss";
-import "../style.css";
+import "./standalone.scss";
+// import "../style.css";
 
 import { Storage } from "@plasmohq/storage"
 const storage = new Storage()
 const kUniKey = 'KeyOfRuleForDomains';
 const kDBKeySettings = 'kDBKeySettings';
 // 生成文本
-// import styleText from "data-text:./standalone.scss";
-import styleText from "data-text:../style.css";
+import styleText from "data-text:./standalone.scss";
+// import styleText from "data-text:../style.css";
 import type { PlasmoGetStyle } from "plasmo";
 
   // injectAnchor 的时候会注入 样式文件
@@ -21,7 +21,7 @@ export const getStyle: PlasmoGetStyle = () => {
   const style = document.createElement("style");
   // https://github.com/PlasmoHQ/plasmo/issues/835
   style.textContent = styleText;
-  // console.log(styleText2);
+  console.log(styleText);
   return style
 }
 
@@ -690,7 +690,7 @@ function Copyable({innerHTML, onClose}:{innerHTML: string, onClose: () => void})
               <div className="absolute top-4 right-4 text-primary">
                   <button className="btn btn-outline-primary" onClick={onClose}>关闭浮层</button>
               </div>
-              <h1 className="text-2xl font-bold mb-4 text-primary">复制以下内容</h1>
+              <h1 className="text-2xl font-bold mb-4 text-primary">提取以下内容</h1>
               <div className="border-indigo-500/75 border-dashed border-2 rounded p-4" dangerouslySetInnerHTML={{ __html: innerHTML }}></div>
           </div>
       </div>
