@@ -132,16 +132,16 @@ function Popup() {
       </div>
 
       <div className=" border-indigo-500 flex flex-col justify-between">
-        <div className="font-bold flex flex-row gap-1 items-center text-blue-600 pt-4 pb-2 text-sm cursor-pointer" onClick={createNewRule}>
+        <div className="font-bold flex flex-row gap-1 items-center text-blue-600 py-2 text-sm cursor-pointer" onClick={createNewRule}>
           <IoIosCopy /> 去除文本选中限制
         </div>
-        <div className="font-bold flex flex-row gap-1 items-center text-blue-600 pt-4 pb-2 text-sm cursor-pointer" onClick={exportText}>
+        <div className="font-bold flex flex-row gap-1 items-center text-blue-600 py-2 text-sm cursor-pointer" onClick={exportText}>
           <FaFileExport></FaFileExport>强制提取文本内容
         </div>
-        <div className="font-bold flex flex-row gap-1 items-center text-blue-600 pt-4 pb-2 text-sm cursor-pointer" onClick={startPicking}>
+        <div className="font-bold flex flex-row gap-1 items-center text-blue-600 py-2 text-sm cursor-pointer" onClick={startPicking}>
           <IoIosCreate /> 手动创建规则 （beta）
         </div>
-        <div className="font-bold flex flex-row gap-1 items-center text-blue-600 pt-4 pb-2 text-sm">
+        <div className="font-bold flex flex-row gap-1 items-center text-blue-600 py-2 text-sm">
           <FaExternalLinkAlt /><a href="/options.html" target="_blank">进入设置</a>{" "} 
         </div>
       </div>

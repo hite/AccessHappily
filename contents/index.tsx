@@ -300,7 +300,7 @@ function Content() {
     }
     // 这里的 pickPhase  还是最开始闭包捕获的值
     if(pickPhase_ext == 'picking'){
-      showHighlightFrame(e.target as Element);
+      showHighlightFrame(e.target);
       e.preventDefault();
       e.stopPropagation();
       return false;
@@ -316,6 +316,21 @@ function Content() {
     // }
     return true;
   }
+  /** @param {WheelEvent} event */
+  const onWheel = (event: WheelEvent) => {
+    if(pickPhase_ext === 'picking' && highlightFrame){
+      event.preventDefault();
+      if (event.deltaY < 0) {
+          // Scrolling up, select parent element
+          showHighlightFrame(highlightFrame.parentElement);
+      } else {
+          // Scrolling down, select first child element
+          showHighlightFrame(highlightFrame.firstElementChild);
+      }
+      return false;
+    }
+    return true;
+}
   const clickHandler = (e: Event)=>{
     console.log(e.target, 'clickHandler');
     // 这里的 pickPhase  还是最开始闭包捕获的值
@@ -366,8 +381,9 @@ function Content() {
         all.forEach((e)=>{
           e.addEventListener('click', clickHandler, true);
         });
-        document.body.addEventListener('mouseover', mouseOverHandler, false);
-        document.body.addEventListener('mouseout', mouseLeaveHandler, false);
+        doc.addEventListener('mouseover', mouseOverHandler, false);
+        doc.addEventListener('mouseout', mouseLeaveHandler, false);
+        doc.addEventListener('wheel', onWheel, { passive: false })
         doc.setAttribute('ah-pickingEvent-attached', 'true');
       }
     };
@@ -435,7 +451,7 @@ function Content() {
       UI = <div className="fixed p-2 flex flex-col items-center gap-1 justify-center w-screen bg-backgroundSecondary/75 text-primary ring-1 ring-offset-1 ring-blue-500">
       <div className=" text-center text-xl whitespace-nowrap">1，移动鼠标，选择需要操作的元素</div>
       <div className=" text-center text-xl whitespace-nowrap">2，左键点击元素,确认{pickType =='exporting'?'导出内容':'创建规则'}</div>
-      <button className="btn-sm btn" onClick={()=>{
+      <button className="btn btn-outline-primary" onClick={()=>{
         onPickPhaseChange('');
         setUIType('');
       }}>取消</button>
@@ -500,78 +516,35 @@ function Warning({ message, autoHideCallback }: { message: string, autoHideCallb
 }
 
 const highlightFrameClass = 'ah_highlight_frame';
-const highlightSelector = '.' + highlightFrameClass;
-let highlightLeftFrame = null, highlightTopFrame = null ,highlightRightFrame = null, highlightBottomFrame = null;
-let highlightFrames = function() { 
-  return [highlightLeftFrame, highlightTopFrame, highlightRightFrame, highlightBottomFrame]
-};
-const highlightTest = (e: Element)=>{
+let highlightFrame: HTMLElement = null;
+const highlightTest = (e:HTMLElement)=>{
   try {
     showHighlightFrame(e);
     //
-    highlightFrames().forEach((o)=>{
-      o.className += ' ah_highlight_elem';
-    });
+    e.classList.add('ah_highlight_elem');
     window.setTimeout(() => {
-      highlightFrames().forEach((o)=>{
-        o.className = o.className.replace('ah_highlight_elem', '');
-      });
+      e.classList.remove('ah_highlight_elem');
     }, 2000);
   } catch (error) {
     alert(error.message);
   }
 };
 function hideHighlightFrame(){
-  if(highlightLeftFrame){
-    highlightFrames().forEach((o)=>{
-      o.style.display = 'none';
-    });
+  if(highlightFrame){
+    highlightFrame.classList.remove(highlightFrameClass);
+    highlightFrame = null;
   }
 }
 
 function showHighlightFrame(targetEle: Element){
-  let topEle = document.querySelector(highlightSelector+'_top') as HTMLDivElement;
-  const borderWidth = 2;
-    if(!topEle) {
-      console.info('没有找到该元素, create it first');
-      document.body.insertAdjacentHTML('beforeend',`<div class="${highlightFrameClass +' '+ highlightFrameClass}_top" ></div>
-      <div class="${highlightFrameClass +' '+ highlightFrameClass}_left" ></div>
-      <div class="${highlightFrameClass +' '+ highlightFrameClass}_right" ></div>
-      <div class="${highlightFrameClass +' '+ highlightFrameClass}_bottom" ></div>`);
-      topEle = document.querySelector(highlightSelector+'_top') as HTMLDivElement;
-    }
-    highlightTopFrame = topEle;
-    highlightLeftFrame = document.querySelector(highlightSelector+'_left') as HTMLDivElement;
-    highlightBottomFrame = document.querySelector(highlightSelector+'_bottom') as HTMLDivElement;
-    highlightRightFrame = document.querySelector(highlightSelector+'_right') as HTMLDivElement;
-    // get position
-    let target = targetEle.getBoundingClientRect();
-    var X = target.left + document.documentElement.scrollLeft;
-    var Y = target.top + document.documentElement.scrollTop;
-    const w = target.width, h = target.height;
-    highlightTopFrame.style.width = w + 'px';
-    highlightTopFrame.style.height = borderWidth + 'px';
-    highlightTopFrame.style.left = X + 'px';
-    highlightTopFrame.style.top = Y + 'px';
-    
-    highlightLeftFrame.style.width = borderWidth + 'px';
-    highlightLeftFrame.style.height = h + 'px';
-    highlightLeftFrame.style.left = X + 'px';
-    highlightLeftFrame.style.top = Y + 'px';
-
-    highlightRightFrame.style.width = borderWidth + 'px';
-    highlightRightFrame.style.height = h + 'px';
-    highlightRightFrame.style.left = X + w + 'px';
-    highlightRightFrame.style.top = Y + 'px';
-
-    highlightBottomFrame.style.width = w + 'px';
-    highlightBottomFrame.style.height = borderWidth + 'px';
-    highlightBottomFrame.style.left = X + 'px';
-    highlightBottomFrame.style.top = (Y + h) + 'px';
-
-    highlightFrames().forEach((o)=>{
-      o.style.display = 'block';
-    });
+  if(!targetEle || !(targetEle instanceof HTMLElement)) {
+    return;
+  }
+  if(highlightFrame) {
+    highlightFrame.classList.remove(highlightFrameClass)
+  }
+  targetEle.classList.add(highlightFrameClass);
+  highlightFrame = targetEle;
 }
 
 function AddPanel({selector, ruleType, ruleName, onClose}:{selector: string, ruleType:RuleActionType, ruleName: string, onClose: Function}) {

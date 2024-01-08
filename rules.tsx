@@ -21,18 +21,17 @@ export interface IRule {
 
 export const builtinCSSInHost = `
 @keyframes ah_blink {
-  0% { opacity: 0.3; background-color: red; }
-  50% { opacity: 1;background-color: blue; }
-  100% { opacity: 0.3;background-color: red; }
+  0% { opacity: 0.3; outline-color: red; }
+  50% { opacity: 1; outline-color: green; }
+  100% { opacity: 0.3;outline-color: red; }
 }
 
 .ah_highlight_elem {
   animation: ah_blink 1s linear;
 }
 .ah_highlight_frame {
-  background-color: red !important;
-  z-index:99999999;
-  position:absolute;
+  outline: red solid 2px;
+  outline-offset: -2px;
 }
 `
 
