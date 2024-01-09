@@ -21,7 +21,7 @@ export const getStyle: PlasmoGetStyle = () => {
   const style = document.createElement("style");
   // https://github.com/PlasmoHQ/plasmo/issues/835
   style.textContent = styleText;
-  console.log(styleText);
+  // console.log(styleText);
   return style
 }
 
@@ -111,7 +111,7 @@ async function executeRule(obj: IRuleAction, onFinish: (message: string)=> void)
     if (elements.length > 0) {
       if (type ==  RuleActionType.autoHide) {
         elements.forEach((e)=>{
-          e.style = 'position:absolute !important;right: -10000px !important;';
+          e.parentElement.removeChild(e);
         });
         onFinish('已自动隐藏元素， 规则名 ：' + obj.name);
         markExecuting(obj, false);
@@ -356,7 +356,6 @@ function Content() {
 
   useEffect(()=>{
     eventEmitter.add(kEventKeyContextMenus, ()=>{
-
       var selector = getSelector(lastRightClickedElement);
       if(selector) {
         setSelector(selector);
@@ -686,12 +685,18 @@ function Copyable({innerHTML, onClose}:{innerHTML: string, onClose: () => void})
       <div id="mask" className="opacity-75 bg-slate-400 w-full h-full absolute">
       </div>
       <div className="w-full h-full rounded absolute">
-          <div className="m-auto w-3/5 p-4 bg-white relative max-h-full overflow-scroll">
+          <div className="m-auto w-3/5 p-4 bg-white relative max-h-full overflow-scroll" onWheelCapture={(e)=>{
+            e.stopPropagation();
+            return true;
+          }}>
               <div className="absolute top-4 right-4 text-primary">
                   <button className="btn btn-outline-primary" onClick={onClose}>关闭浮层</button>
               </div>
               <h1 className="text-2xl font-bold mb-4 text-primary">提取以下内容</h1>
-              <div className="border-indigo-500/75 border-dashed border-2 rounded p-4" dangerouslySetInnerHTML={{ __html: innerHTML }}></div>
+              <div className="border-indigo-500/75 border-dashed border-2 rounded p-4" style={{
+                userSelect: 'text',
+                '-webkit-touch-callout': 'text'
+              }} dangerouslySetInnerHTML={{ __html: innerHTML }}></div>
           </div>
       </div>
   </div>
