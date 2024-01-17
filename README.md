@@ -1,33 +1,19 @@
-This is a [Plasmo extension](https://docs.plasmo.com/) project bootstrapped with [`plasmo init`](https://www.npmjs.com/package/plasmo).
 
-## Getting Started
+本插件是基于 [Plasmo extension](https://docs.plasmo.com/) project bootstrapped with [`plasmo init`](https://www.npmjs.com/package/plasmo). 实现.
+支持自定义规则和订阅远程规则的网页美化工具。
+## 主要功能
 
-First, run the development server:
+- 自动隐藏网页上的某些元素，常见的如浏览某些帖子时，总是弹出要求登录账号、下载 App 弹窗。
+- 自动点击页面上的一些元素，常见的如”即将跳转网页安全性未知”的中间页面。
+- 去除一些文档页面的不可选中、不可复制的限制（点名 CSDN，不让复制代码——简直离谱）
 
-```bash
-pnpm dev
-# or
-npm run dev
-```
+## 使用说明
+文章介绍：[少数派](https://sspai.com/85706)
+[观看视频：](./HowToUse/AccessHappily%20使用简介.mp4)
 
-Open your browser and load the appropriate development build. For example, if you are developing for the chrome browser, using manifest v3, use: `build/chrome-mv3-dev`.
+## 软件下载地址
 
-You can start editing the popup by modifying `popup.tsx`. It should auto-update as you make changes. To add an options page, simply add a `options.tsx` file to the root of the project, with a react component default exported. Likewise to add a content page, add a `content.ts` file to the root of the project, importing some module and do some logic, then reload the extension on your browser.
+前往各大浏览器插件商店，搜索AccessHappily
+1. [Chrome 商店](https://chromewebstore.google.com/detail/accesshappily/peeaeapjojbojjagjmnjepkchdjkcgam)
 
-For further guidance, [visit our Documentation](https://docs.plasmo.com/)
-
-## Making production build
-
-Run the following:
-
-```bash
-pnpm build
-# or
-npm run build
-```
-
-This should create a production bundle for your extension, ready to be zipped and published to the stores.
-
-## Submit to the webstores
-
-The easiest way to deploy your Plasmo extension is to use the built-in [bpp](https://bpp.browser.market) GitHub action. Prior to using this action however, make sure to build your extension and upload the first version to the store to establish the basic credentials. Then, simply follow [this setup instruction](https://docs.plasmo.com/framework/workflows/submit) and you should be on your way for automated submission!
+2. [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/accesshappily/)
