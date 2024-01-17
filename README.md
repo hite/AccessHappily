@@ -9,7 +9,7 @@
 
 ## 使用说明
 文章介绍：[少数派](https://sspai.com/85706)
-[观看视频：](./HowToUse/AccessHappily%20使用简介.mp4)
+[观看视频](https://player.bilibili.com/player.html?bvid=BV1oa4y117ro&autoplay=false)
 
 ## 软件下载地址
 
